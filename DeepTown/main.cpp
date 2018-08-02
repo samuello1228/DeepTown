@@ -15,6 +15,7 @@ class itemInfo
     {
         name = newName;
         price = newPrice;
+        reservation_level = 0;
     }
     
     static int findItem(string itemName, vector<itemInfo>& itemList)
@@ -29,11 +30,16 @@ class itemInfo
     }
     
     double setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList);
+    static void set_reservation_level(vector<itemInfo>& itemList, vector<ingredientInfo>& level);
+    static void set_reservation_quest(vector<itemInfo>& itemList, vector<ingredientInfo>& quest);
     
     string name;
     double price;
     double timePerPiece;
     double pricePerTime;
+    
+    int reservation_level;
+    int reservation_quest;
 };
 
 class buildingInfo
@@ -247,6 +253,42 @@ double procedureInfo::setTimePerProcedure(vector<itemInfo>& itemList, vector<pro
     return timePerProcedure;
 }
 
+void itemInfo::set_reservation_level(vector<itemInfo>& itemList, vector<ingredientInfo>& level)
+{
+    for(unsigned int i = 0; i<level.size(); i++)
+    {
+        itemList[ level[i].itemIndex ].reservation_level += level[i].quantity;
+    }
+}
+
+void itemInfo::set_reservation_quest(vector<itemInfo>& itemList, vector<ingredientInfo>& quest)
+{
+    for(unsigned int i = 0; i<quest.size(); i++)
+    {
+        itemList[ quest[i].itemIndex ].reservation_quest += quest[i].quantity;
+    }
+}
+
+void FillIngredients(string itemName, int quantity, vector<ingredientInfo>& quest, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
+{
+    int itemIndex = itemInfo::findItem(itemName,itemList);
+    for(unsigned int i = 0; i<procedureList.size(); i++)
+    {
+        for(unsigned int j = 0; j<procedureList[i].products.size(); j++)
+        {
+            int productIndex = procedureList[i].products[j].itemIndex;
+            if(itemIndex == productIndex)
+            {
+                for(unsigned int k = 0; k<procedureList[i].ingredients.size(); k++)
+                {
+                    int ingredientIndex = procedureList[i].ingredients[k].itemIndex;
+                    quest.push_back(ingredientInfo(itemList[ingredientIndex].name, procedureList[i].ingredients[k].quantity *quantity, itemList));
+                }
+            }
+        }
+    }
+}
+
 int main()
 {
     //item list
@@ -268,13 +310,16 @@ int main()
     itemList.push_back(itemInfo("titanium ore",19));
     itemList.push_back(itemInfo("alexandrite",19));
     itemList.push_back(itemInfo("uranium",22));
-    //itemList.push_back(itemInfo("obsidian",));
-    //itemList.push_back(itemInfo("helium 3",));
+    itemList.push_back(itemInfo("obsidian",20));
+    itemList.push_back(itemInfo("helium 3",400));
+    
+    itemList.push_back(itemInfo("sodium chloride",100));
+    itemList.push_back(itemInfo("lutetium ore",500));
     
     itemList.push_back(itemInfo("silicon",100));
     itemList.push_back(itemInfo("sulfur",100));
     itemList.push_back(itemInfo("sodium",100));
-    //itemList.push_back(itemInfo("nitrogen",100));
+    itemList.push_back(itemInfo("nitrogen",300));
     
     itemList.push_back(itemInfo("oil",21));
     itemList.push_back(itemInfo("water",5));
@@ -295,7 +340,8 @@ int main()
     itemList.push_back(itemInfo("gold bar",250));
     itemList.push_back(itemInfo("steel plate",1800));
     itemList.push_back(itemInfo("titanium bar",3000));
-    //itemList.push_back(itemInfo("magnetite bar",));
+    itemList.push_back(itemInfo("magnetite bar",137000));
+    itemList.push_back(itemInfo("lutetium bar",68000));
     
     itemList.push_back(itemInfo("graphite",15));
     itemList.push_back(itemInfo("copper nail",7));
@@ -316,11 +362,12 @@ int main()
     itemList.push_back(itemInfo("solar panel",69000));
     itemList.push_back(itemInfo("gear",18500));
     itemList.push_back(itemInfo("bomb",55500));
-    //itemList.push_back(itemInfo("compressor",));
-    //itemList.push_back(itemInfo("optic fiber",));
-    //itemList.push_back(itemInfo("dry ice",));
-    //itemList.push_back(itemInfo("magnet",));
-    //itemList.push_back(itemInfo("electrical engine",));
+    itemList.push_back(itemInfo("compressor",44000));
+    itemList.push_back(itemInfo("optic fiber",10500));
+    itemList.push_back(itemInfo("dry ice",140000));
+    itemList.push_back(itemInfo("magnet",300000));
+    itemList.push_back(itemInfo("electrical engine",745000));
+    itemList.push_back(itemInfo("chipset",40000));
     
     itemList.push_back(itemInfo("clean water",1200));
     itemList.push_back(itemInfo("hydrogen",400));
@@ -333,10 +380,12 @@ int main()
     itemList.push_back(itemInfo("titanium",260));
     itemList.push_back(itemInfo("diethyl ether",17000));
     itemList.push_back(itemInfo("gunpowder",2500));
-    //itemList.push_back(itemInfo("liquid nitrogen",));
-    //itemList.push_back(itemInfo("magnetite ore",));
-    //itemList.push_back(itemInfo("enhanced helium 3",));
-    //itemList.push_back(itemInfo("toxic bomb",));
+    itemList.push_back(itemInfo("liquid nitrogen",12500));
+    itemList.push_back(itemInfo("magnetite ore",12500));
+    itemList.push_back(itemInfo("enhanced helium 3",190000));
+    itemList.push_back(itemInfo("toxic bomb",77500));
+    itemList.push_back(itemInfo("hydrochloric acid",12000));
+    itemList.push_back(itemInfo("lutetium",13500));
     
     int tradingLevel = 50;
     double SF = (1 + 0.02 * (tradingLevel-1)) * 1.35;
@@ -345,7 +394,7 @@ int main()
     itemList.push_back(itemInfo("amber bracelet",280*SF));
     itemList.push_back(itemInfo("maya calendar",6000*SF));
     itemList.push_back(itemInfo("haircomb",14000*SF));
-    //itemList.push_back(itemInfo("obsidian knife",32000*SF));
+    itemList.push_back(itemInfo("obsidian knife",32000*SF));
     itemList.push_back(itemInfo("polished emerald",160));
     itemList.push_back(itemInfo("polished topaz",200));
     itemList.push_back(itemInfo("polished ruby",250));
@@ -353,7 +402,7 @@ int main()
     itemList.push_back(itemInfo("polished sapphire",230));
     itemList.push_back(itemInfo("polished amethyst",250));
     itemList.push_back(itemInfo("polished alexandrite",270));
-    //itemList.push_back(itemInfo("polished obsidian",));
+    itemList.push_back(itemInfo("polished obsidian",280));
     
     itemList.push_back(itemInfo("uranium rod",17000));
     
@@ -398,16 +447,27 @@ int main()
     procedureList.push_back(procedureInfo("mining station",60,"alexandrite",miningRate,buildingList,itemList));
     miningRate = BasicMiningRate;
     procedureList.push_back(procedureInfo("mining station",60,"uranium",miningRate,buildingList,itemList));
+    miningRate = BasicMiningRate;
+    procedureList.push_back(procedureInfo("mining station",60,"obsidian",miningRate,buildingList,itemList));
+    miningRate = BasicMiningRate;
+    procedureList.push_back(procedureInfo("mining station",60,"helium 3",miningRate,buildingList,itemList));
     
     //chemical mining
     buildingList.push_back(buildingInfo("chemical mining",8));
     procedureList.push_back(procedureInfo("chemical mining",10*60,"silicon",20,buildingList,itemList));
     procedureList.push_back(procedureInfo("chemical mining",10*60,"sulfur",20,buildingList,itemList));
     procedureList.push_back(procedureInfo("chemical mining",10*60,"sodium",20,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemical mining",10*60,"nitrogen",20,buildingList,itemList));
     
     //oil mining
     buildingList.push_back(buildingInfo("oil mining",1));
     procedureList.push_back(procedureInfo("oil mining",60*60,"oil",7,buildingList,itemList));
+    
+    //Asteroid Mining
+    miningRate = BasicMiningRate;
+    procedureList.push_back(procedureInfo("mining station",60,"sodium chloride",miningRate,buildingList,itemList));
+    miningRate = BasicMiningRate;
+    procedureList.push_back(procedureInfo("mining station",60,"lutetium ore",miningRate,buildingList,itemList));
     
     //water collector
     buildingList.push_back(buildingInfo("water collector",1));
@@ -431,6 +491,8 @@ int main()
     procedureList.push_back(procedureInfo("smelting","gold",5,60,"gold bar",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("smelting","steel bar",5,2*60,"steel plate",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("smelting","titanium",5,60,"titanium bar",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("smelting","magnetite ore",5,60,"magnetite bar",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("smelting","lutetium",5,60,"lutetium bar",1,buildingList,itemList));
     
     //crafting
     buildingList.push_back(buildingInfo("crafting",8));
@@ -453,6 +515,12 @@ int main()
     procedureList.push_back(procedureInfo("crafting","rubber",3,"silicon",10,"glass",50,60,"solar panel",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","diamond cutter",1,"titanium bar",1,80,"gear",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","steel bar",5,"gunpowder",10,3*60,"bomb",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","refined oil",2,"rubber",1,"iron bar",5,3*60,"compressor",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","plastic plate",1,"oxygen",10,"silicon",10,2*60,"optic fiber",10,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","graphite",1000,"compressor",1,"green laser",10,2*60,"dry ice",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","magnetite bar",1,2*60,"magnet",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","insulated wire",50,"magnet",1,"aluminium bar",20,5*60,"electrical engine",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","silver bar",1,"hydrochloric acid",1,"circuits",3,60,"chipset",1,buildingList,itemList));
     
     //chemistry
     buildingList.push_back(buildingInfo("chemistry",5));
@@ -466,6 +534,12 @@ int main()
     procedureList.push_back(procedureInfo("chemistry","sulfuric acid",1,"titanium ore",100,20,"titanium",50,buildingList,itemList));
     procedureList.push_back(procedureInfo("chemistry","sulfuric acid",1,"ethanol",1,60,"diethyl ether",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("chemistry","diethyl ether",1,"sulfuric acid",2,"tree",2,2*60,"gunpowder",20,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemistry","aluminium bottle",1,"nitrogen",10,"compressor",1,2*60,"liquid nitrogen",4,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemistry","oxygen",5,"iron bar",10,"green laser",5,6*60,"magnetite ore",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemistry","aluminium bottle",1,"helium 3",100,"compressor",1,30*60,"enhanced helium 3",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemistry","sulfuric acid",10,2*60,"toxic bomb",10,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemistry","sulfuric acid",1,"sodium chloride",20,2*60,"hydrochloric acid",4,buildingList,itemList));
+    procedureList.push_back(procedureInfo("chemistry","sulfuric acid",1,"lutetium ore",20,10*60,"lutetium",1,buildingList,itemList));
     
     //jewel crafting
     buildingList.push_back(buildingInfo("jewel crafting",4));
@@ -474,7 +548,7 @@ int main()
     procedureList.push_back(procedureInfo("jewel crafting","silver bar",1,"polished amber",1,2*60,"amber bracelet",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","silver bar",2,"gold bar",10,2*60,"maya calendar",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","silver bar",1,"polished amethyst",15,"polished alexandrite",10,2*60,"haircomb",1,buildingList,itemList));
-    //procedureList.push_back(procedureInfo("jewel crafting","silver bar",1,"tree",2,"polished obsidian",50,2*60,"obsidian knife",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("jewel crafting","silver bar",1,"tree",2,"polished obsidian",50,2*60,"obsidian knife",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","emerald",5,30,"polished emerald",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","topaz",5,60,"polished topaz",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","ruby",5,60,"polished ruby",1,buildingList,itemList));
@@ -482,7 +556,7 @@ int main()
     procedureList.push_back(procedureInfo("jewel crafting","sapphire",5,60,"polished sapphire",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","amethyst",5,60,"polished amethyst",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("jewel crafting","alexandrite",5,60,"polished alexandrite",1,buildingList,itemList));
-    //procedureList.push_back(procedureInfo("jewel crafting","obsidian",5,60,"polished obsidian",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("jewel crafting","obsidian",5,60,"polished obsidian",1,buildingList,itemList));
     
     //uranium enrichment
     buildingList.push_back(buildingInfo("uranium enrichment",2));
@@ -529,10 +603,389 @@ int main()
         itemList[i].setTimePerPiece(itemList,procedureList,buildingList);
     }
     
+    //reservation for level upgrade
+    vector<ingredientInfo> level;
+    //level 300
+    level.push_back(ingredientInfo("gear",30,itemList));
+    level.push_back(ingredientInfo("copper nail",3000,itemList));
+    level.push_back(ingredientInfo("plastic plate",15,itemList));
+    level.push_back(ingredientInfo("polished topaz",200,itemList));
+    level.push_back(ingredientInfo("motherboard",35,itemList));
+    level.push_back(ingredientInfo("hydrogen",100,itemList));
+    level.push_back(ingredientInfo("rubber",100,itemList));
+    level.push_back(ingredientInfo("gold bar",1000,itemList));
+    level.push_back(ingredientInfo("insulated wire",550,itemList));
+    level.push_back(ingredientInfo("accumulator",40,itemList));
+    
+    //level 330
+    level.push_back(ingredientInfo("refined oil",40,itemList));
+    level.push_back(ingredientInfo("silver bar",500,itemList));
+    level.push_back(ingredientInfo("steel plate",100,itemList));
+    level.push_back(ingredientInfo("polished sapphire",1000,itemList));
+    level.push_back(ingredientInfo("tree",100,itemList));
+    level.push_back(ingredientInfo("solar panel",12,itemList));
+    level.push_back(ingredientInfo("grape",150,itemList));
+    level.push_back(ingredientInfo("polished amethyst",1000,itemList));
+    
+    //level 340
+    level.push_back(ingredientInfo("optic fiber",50,itemList));
+    level.push_back(ingredientInfo("polished obsidian",1500,itemList));
+    level.push_back(ingredientInfo("copper bar",8700,itemList));
+    level.push_back(ingredientInfo("polished amber",3000,itemList));
+    level.push_back(ingredientInfo("diethyl ether",50,itemList));
+    level.push_back(ingredientInfo("polished alexandrite",500,itemList));
+    level.push_back(ingredientInfo("gold bar",1000,itemList));
+    level.push_back(ingredientInfo("rubber",50,itemList));
+    
+    //level 350
+    level.push_back(ingredientInfo("gear",55,itemList));
+    level.push_back(ingredientInfo("oxygen",60,itemList));
+    level.push_back(ingredientInfo("aluminium bar",5000,itemList));
+    level.push_back(ingredientInfo("polished emerald",3600,itemList));
+    level.push_back(ingredientInfo("solar panel",15,itemList));
+    level.push_back(ingredientInfo("clean water",200,itemList));
+    level.push_back(ingredientInfo("tree",1350,itemList));
+    level.push_back(ingredientInfo("polished diamond",900,itemList));
+    
+    //level 360
+    level.push_back(ingredientInfo("diamond cutter",200,itemList));
+    level.push_back(ingredientInfo("motherboard",20,itemList));
+    level.push_back(ingredientInfo("polished topaz",1500,itemList));
+    level.push_back(ingredientInfo("graphite",19000,itemList));
+    level.push_back(ingredientInfo("accumulator",60,itemList));
+    level.push_back(ingredientInfo("lamp",1000,itemList));
+    level.push_back(ingredientInfo("silver bar",1500,itemList));
+    level.push_back(ingredientInfo("clean water",250,itemList));
+    
+    //level 370
+    level.push_back(ingredientInfo("rubber",120,itemList));
+    level.push_back(ingredientInfo("titanium bar",50,itemList));
+    level.push_back(ingredientInfo("liana",195,itemList));
+    level.push_back(ingredientInfo("sulfuric acid",95,itemList));
+    level.push_back(ingredientInfo("sulfuric acid",50,itemList));
+    level.push_back(ingredientInfo("steel plate",800,itemList));
+    level.push_back(ingredientInfo("accumulator",40,itemList));
+    level.push_back(ingredientInfo("titanium bar",120,itemList));
+    
+    //level 380
+    level.push_back(ingredientInfo("plastic plate",60,itemList));
+    level.push_back(ingredientInfo("polished topaz",500,itemList));
+    level.push_back(ingredientInfo("grape",250,itemList));
+    level.push_back(ingredientInfo("graphite",25600,itemList));
+    level.push_back(ingredientInfo("iron bar",2500,itemList));
+    level.push_back(ingredientInfo("polished ruby",400,itemList));
+    level.push_back(ingredientInfo("hydrogen",1010,itemList));
+    level.push_back(ingredientInfo("tree",2000,itemList));
+    
+    //level 390
+    level.push_back(ingredientInfo("copper nail",15200,itemList));
+    level.push_back(ingredientInfo("magnetite bar",1,itemList));
+    level.push_back(ingredientInfo("polished sapphire",1900,itemList));
+    level.push_back(ingredientInfo("ethanol",105,itemList));
+    level.push_back(ingredientInfo("liana",67,itemList));
+    level.push_back(ingredientInfo("wire",7580,itemList));
+    level.push_back(ingredientInfo("silver bar",2350,itemList));
+    level.push_back(ingredientInfo("polished amethyst",1900,itemList));
+    
+    //level 400
+    level.push_back(ingredientInfo("titanium",470,itemList));
+    level.push_back(ingredientInfo("grape",80,itemList));
+    level.push_back(ingredientInfo("battery",2500,itemList));
+    level.push_back(ingredientInfo("steel plate",280,itemList));
+    level.push_back(ingredientInfo("polished obsidian",470,itemList));
+    level.push_back(ingredientInfo("gunpowder",52,itemList));
+    level.push_back(ingredientInfo("tree",2750,itemList));
+    level.push_back(ingredientInfo("circuits",270,itemList));
+    
+    //level 410
+    level.push_back(ingredientInfo("liana",82,itemList));
+    level.push_back(ingredientInfo("liquid nitrogen",10,itemList));
+    level.push_back(ingredientInfo("amber insulation",10500,itemList));
+    level.push_back(ingredientInfo("copper bar",23300,itemList));
+    level.push_back(ingredientInfo("polished amber",2150,itemList));
+    level.push_back(ingredientInfo("magnetite ore",12,itemList));
+    level.push_back(ingredientInfo("grape",410,itemList));
+    level.push_back(ingredientInfo("lab flask",780,itemList));
+    
+    //level 420
+    level.push_back(ingredientInfo("polished alexandrite",590,itemList));
+    level.push_back(ingredientInfo("gold bar",650,itemList));
+    level.push_back(ingredientInfo("enhanced helium 3",4,itemList));
+    level.push_back(ingredientInfo("tree",3500,itemList));
+    level.push_back(ingredientInfo("aluminium bar",3500,itemList));
+    level.push_back(ingredientInfo("gear",10,itemList));
+    level.push_back(ingredientInfo("liana",410,itemList));
+    level.push_back(ingredientInfo("insulated wire",1000,itemList));
+    
+    //level 430
+    level.push_back(ingredientInfo("silver bar",1000,itemList));
+    level.push_back(ingredientInfo("polished emerald",2000,itemList));
+    level.push_back(ingredientInfo("refined oil",50,itemList));
+    level.push_back(ingredientInfo("grape",500,itemList));
+    level.push_back(ingredientInfo("compressor",5,itemList));
+    level.push_back(ingredientInfo("titanium bar",70,itemList));
+    level.push_back(ingredientInfo("polished diamond",5000,itemList));
+    level.push_back(ingredientInfo("diethyl ether",50,itemList));
+    
+    //level 440
+    level.push_back(ingredientInfo("steel plate",150,itemList));
+    level.push_back(ingredientInfo("electrical engine",1,itemList));
+    
+    itemInfo::set_reservation_level(itemList,level);
+    
+    //reservation for quest
+    vector<ingredientInfo> quest;
+    
+    //New Gas: Nitrogen
+    quest.push_back(ingredientInfo("motherboard",50,itemList));
+    quest.push_back(ingredientInfo("insulated wire",1000,itemList));
+    quest.push_back(ingredientInfo("steel plate",500,itemList));
+    FillIngredients("compressor",1,quest,itemList,procedureList);
+    FillIngredients("liquid nitrogen",1,quest,itemList,procedureList);
+    
+    //Here I Go Crafting Again!
+    FillIngredients("optic fiber",10+50,quest,itemList,procedureList);
+    FillIngredients("compressor",10+50,quest,itemList,procedureList);
+    
+    //Quite The Goldsmith
+    FillIngredients("polished obsidian",10+100,quest,itemList,procedureList);
+    FillIngredients("polished sapphire",100+300,quest,itemList,procedureList);
+    FillIngredients("polished diamond",100+300,quest,itemList,procedureList);
+    
+    //Providing The Weaponry
+    quest.push_back(ingredientInfo("obsidian knife",10+50+100,itemList));
+    
+    //Stage I
+    quest.push_back(ingredientInfo("aluminium bar",1250,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",225,itemList));
+    quest.push_back(ingredientInfo("rubber",45,itemList));
+    
+    //fuel tech
+    quest.push_back(ingredientInfo("compressor",30,itemList));
+    quest.push_back(ingredientInfo("gunpowder",2000,itemList));
+    quest.push_back(ingredientInfo("titanium bar",210,itemList));
+    
+    //fuel tank
+    quest.push_back(ingredientInfo("solid propellant",20,itemList));
+    quest.push_back(ingredientInfo("uranium rod",95,itemList));
+    quest.push_back(ingredientInfo("enhanced helium 3",380,itemList));
+    
+    //rocket engine
+    //Engine IR
+    quest.push_back(ingredientInfo("aluminium bar",3120,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",310,itemList));
+    quest.push_back(ingredientInfo("rubber",25,itemList));
+    
+    //Nozzle IR
+    quest.push_back(ingredientInfo("graphite",15100,itemList));
+    quest.push_back(ingredientInfo("aluminium bar",6250,itemList));
+    quest.push_back(ingredientInfo("titanium bar",25,itemList));
+    
+    //Engine IL
+    quest.push_back(ingredientInfo("aluminium bar",3120,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",310,itemList));
+    quest.push_back(ingredientInfo("rubber",25,itemList));
+    
+    //Nozzle IL
+    quest.push_back(ingredientInfo("graphite",15100,itemList));
+    quest.push_back(ingredientInfo("aluminium bar",6250,itemList));
+    quest.push_back(ingredientInfo("titanium bar",25,itemList));
+    
+    //Engine IC
+    quest.push_back(ingredientInfo("aluminium bar",3120,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",310,itemList));
+    quest.push_back(ingredientInfo("rubber",25,itemList));
+    
+    //Nozzle IC
+    quest.push_back(ingredientInfo("graphite",15100,itemList));
+    quest.push_back(ingredientInfo("aluminium bar",6250,itemList));
+    quest.push_back(ingredientInfo("titanium bar",25,itemList));
+    
+    //Stage I Winglet
+    quest.push_back(ingredientInfo("aluminium bar",8888,itemList));
+    quest.push_back(ingredientInfo("steel plate",1111,itemList));
+    quest.push_back(ingredientInfo("gear",100,itemList));
+    
+    //Decoupler I
+    quest.push_back(ingredientInfo("copper nail",33350,itemList));
+    quest.push_back(ingredientInfo("steel plate",777,itemList));
+    quest.push_back(ingredientInfo("rubber",25,itemList));
+    
+    //stage II
+    quest.push_back(ingredientInfo("aluminium bar",1250,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",225,itemList));
+    quest.push_back(ingredientInfo("rubber",45,itemList));
+    
+    //fuel tech
+    quest.push_back(ingredientInfo("compressor",30,itemList));
+    quest.push_back(ingredientInfo("gunpowder",2000,itemList));
+    quest.push_back(ingredientInfo("titanium bar",210,itemList));
+    
+    //fuel tank
+    quest.push_back(ingredientInfo("solid propellant",20,itemList));
+    quest.push_back(ingredientInfo("uranium rod",95,itemList));
+    quest.push_back(ingredientInfo("enhanced helium 3",380,itemList));
+    
+    //Nozzle II
+    quest.push_back(ingredientInfo("graphite",15250,itemList));
+    quest.push_back(ingredientInfo("aluminium bar",6450,itemList));
+    quest.push_back(ingredientInfo("titanium bar",20,itemList));
+    
+    //Stage II Winglet
+    quest.push_back(ingredientInfo("aluminium bar",6250,itemList));
+    quest.push_back(ingredientInfo("steel plate",777,itemList));
+    quest.push_back(ingredientInfo("gear",85,itemList));
+    
+    //Decoupler II
+    quest.push_back(ingredientInfo("copper nail",33350,itemList));
+    quest.push_back(ingredientInfo("steel plate",777,itemList));
+    quest.push_back(ingredientInfo("rubber",25,itemList));
+    
+    //Stage III
+    quest.push_back(ingredientInfo("aluminium bar",1250,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",225,itemList));
+    quest.push_back(ingredientInfo("rubber",45,itemList));
+    
+    //Electronic Components
+    quest.push_back(ingredientInfo("solar panel",65,itemList));
+    quest.push_back(ingredientInfo("accumulator",2555,itemList));
+    
+    //Rocket Engine
+    quest.push_back(ingredientInfo("iron bar",22250,itemList));
+    quest.push_back(ingredientInfo("wire",10000,itemList));
+    quest.push_back(ingredientInfo("rubber",90,itemList));
+    
+    //Decoupler III
+    quest.push_back(ingredientInfo("copper nail",33350,itemList));
+    quest.push_back(ingredientInfo("steel plate",777,itemList));
+    quest.push_back(ingredientInfo("rubber",25,itemList));
+    
+    //Node
+    quest.push_back(ingredientInfo("lamp",1900,itemList));
+    quest.push_back(ingredientInfo("glass",1600,itemList));
+    quest.push_back(ingredientInfo("copper bar",9555,itemList));
+    
+    //Node
+    quest.push_back(ingredientInfo("insulated wire",390,itemList));
+    quest.push_back(ingredientInfo("battery",645,itemList));
+    quest.push_back(ingredientInfo("circuits",425,itemList));
+    quest.push_back(ingredientInfo("motherboard",45,itemList));
+    quest.push_back(ingredientInfo("optic fiber",645,itemList));
+    
+    //S.A.S Module
+    quest.push_back(ingredientInfo("silver bar",1600,itemList));
+    quest.push_back(ingredientInfo("glass",1600,itemList));
+    quest.push_back(ingredientInfo("green laser",7550,itemList));
+    
+    //Main Capsule
+    quest.push_back(ingredientInfo("aluminium bar",1250,itemList));
+    quest.push_back(ingredientInfo("diamond cutter",225,itemList));
+    quest.push_back(ingredientInfo("rubber",45,itemList));
+    
+    //Rocket LES
+    quest.push_back(ingredientInfo("aluminium bar",3200,itemList));
+    quest.push_back(ingredientInfo("steel bar",1060,itemList));
+    
+    //Large Obsidian Spear
+    FillIngredients("polished obsidian",2000,quest,itemList,procedureList);
+    
+    //Radiation Protection Unit
+    FillIngredients("copper bar",10000,quest,itemList,procedureList);
+    
+    //Mementos
+    FillIngredients("gold bar",15000,quest,itemList,procedureList);
+    FillIngredients("silver bar",5000,quest,itemList,procedureList);
+    
+    //Craft The PC
+    FillIngredients("accumulator",240,quest,itemList,procedureList);
+    FillIngredients("motherboard",20,quest,itemList,procedureList);
+    FillIngredients("circuits",300,quest,itemList,procedureList);
+    
+    //Mini Tesla Coils
+    FillIngredients("polished amber",4000,quest,itemList,procedureList);
+    FillIngredients("insulated wire",2000,quest,itemList,procedureList);
+    FillIngredients("graphite",50000,quest,itemList,procedureList);
+    
+    //Shiny Arms For The MC!
+    FillIngredients("aluminium bar",10000,quest,itemList,procedureList);
+    FillIngredients("wire",50000,quest,itemList,procedureList);
+    FillIngredients("silver bar",10000,quest,itemList,procedureList);
+    FillIngredients("circuits",200,quest,itemList,procedureList);
+    
+    //The Answer To Life
+    FillIngredients("circuits",42,quest,itemList,procedureList);
+    
+    //Rocket Type A
+    quest.push_back(ingredientInfo("steel plate",50,itemList));
+    quest.push_back(ingredientInfo("optic fiber",10,itemList));
+    quest.push_back(ingredientInfo("solar panel",1,itemList));
+    
+    //Stone of Wisdom
+    //quest.push_back(ingredientInfo("shards of wisdom",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Strength
+    //quest.push_back(ingredientInfo("shards of strength",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Kindness
+    //quest.push_back(ingredientInfo("shards of kindness",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Mistakes
+    //quest.push_back(ingredientInfo("shards of mistakes",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Shine
+    //quest.push_back(ingredientInfo("shards of shine",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Empathy
+    //quest.push_back(ingredientInfo("shards of empathy",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Entropy
+    //quest.push_back(ingredientInfo("shards of entropy",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Radiation
+    //quest.push_back(ingredientInfo("shards of radiation",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Stone of Eternity
+    //quest.push_back(ingredientInfo("shards of eternity",100,itemList));
+    quest.push_back(ingredientInfo("rubber",3,itemList));
+    quest.push_back(ingredientInfo("sulfur",100,itemList));
+    
+    //Scanning The Elder
+    //Research Beam
+    quest.push_back(ingredientInfo("accumulator",100,itemList));
+    quest.push_back(ingredientInfo("chipset",50,itemList));
+    quest.push_back(ingredientInfo("lutetium bar",40,itemList));
+    
+    //Asteroid Mining
+    FillIngredients("hydrochloric acid",5,quest,itemList,procedureList);
+    FillIngredients("chipset",5,quest,itemList,procedureList);
+    FillIngredients("lutetium",5,quest,itemList,procedureList);
+    FillIngredients("lutetium bar",1,quest,itemList,procedureList);
+    
+    itemInfo::set_reservation_quest(itemList,quest);
+    
     //print
     for(unsigned int i = 0; i<itemList.size(); i++)
     {
-        cout<<itemList[i].name<<" "<<itemList[i].timePerPiece<<" "<<itemList[i].pricePerTime<<endl;
+        cout<<itemList[i].name<<": "<<itemList[i].timePerPiece<<" "<<itemList[i].pricePerTime<<endl;
+        //cout<<itemList[i].name<<": "<<itemList[i].reservation_level<<endl;
+        //cout<<itemList[i].name<<": "<<itemList[i].reservation_quest<<endl;
+        //cout<<itemList[i].name<<": "<<itemList[i].reservation_level<<" "<<itemList[i].reservation_quest<<endl;
     }
     
     return 0;
