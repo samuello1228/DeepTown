@@ -19,6 +19,8 @@ class itemInfo
         ToMake.clear();
         reservation_level = 0;
         reservation_quest = 0;
+        total_level = 0;
+        total_quest = 0;
     }
     
     static int findItem(string itemName, vector<itemInfo>& itemList)
@@ -45,6 +47,8 @@ class itemInfo
     
     int reservation_level;
     int reservation_quest;
+    double total_level;
+    double total_quest;
 };
 
 class buildingInfo
@@ -269,22 +273,49 @@ void itemInfo::set_reservation_quest(vector<itemInfo>& itemList, vector<ingredie
     }
 }
 
-void FillIngredients(string itemName, int quantity, vector<ingredientInfo>& quest, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
+void GainResources(string itemName, int quantity, vector<ingredientInfo>& quest, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
 {
     int itemIndex = itemInfo::findItem(itemName,itemList);
-    for(unsigned int i = 0; i<procedureList.size(); i++)
+    int procedureIndex = itemList[itemIndex].procedureIndex;
+    for(unsigned int i = 0; i<procedureList[procedureIndex].ingredients.size(); i++)
     {
-        for(unsigned int j = 0; j<procedureList[i].products.size(); j++)
+        int ingredientIndex = procedureList[procedureIndex].ingredients[i].itemIndex;
+        int totalQuantity = procedureList[procedureIndex].ingredients[i].quantity * (double(quantity) / procedureList[procedureIndex].products[0].quantity) ;
+        quest.push_back(ingredientInfo(itemList[ingredientIndex].name, totalQuantity, itemList));
+    }
+    
+    quest.push_back(ingredientInfo(itemList[itemIndex].name, - quantity, itemList));
+}
+
+void printHierarchy(vector< vector<int> >& hierarchy, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
+{
+    for(unsigned int i = 0; i<hierarchy.size(); i++)
+    {
+        cout<<"Tier "<<i<<":"<<endl;
+        for(unsigned int j = 0; j<hierarchy[i].size(); j++)
         {
-            int productIndex = procedureList[i].products[j].itemIndex;
-            if(itemIndex == productIndex)
+            int itemIndex = hierarchy[i][j];
+            cout<<std::setw(20)<<itemList[itemIndex].name;
+            if(itemList[itemIndex].ToMake.size() == 0) cout<<" (*)";
+            else cout<<"    ";
+            cout<<":";
+            
+            cout<<std::setw(5)<<itemList[itemIndex].reservation_level<<" ";
+            cout<<std::setw(7)<<itemList[itemIndex].total_level<<" ";
+            cout<<std::setw(6)<<itemList[itemIndex].reservation_quest<<" ";
+            cout<<std::setw(11)<<itemList[itemIndex].total_quest<<" ";
+            cout<<std::setw(7)<<int(itemList[itemIndex].reservation_level+itemList[itemIndex].reservation_quest);
+            cout<<std::setw(7)<<int(itemList[itemIndex].total_level+itemList[itemIndex].total_quest);
+            cout<<":";
+            
+            int procedureIndex = itemList[itemIndex].procedureIndex;
+            for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
             {
-                for(unsigned int k = 0; k<procedureList[i].ingredients.size(); k++)
-                {
-                    int ingredientIndex = procedureList[i].ingredients[k].itemIndex;
-                    quest.push_back(ingredientInfo(itemList[ingredientIndex].name, procedureList[i].ingredients[k].quantity *quantity, itemList));
-                }
+                int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
+                int ingredientQuantity = procedureList[procedureIndex].ingredients[k].quantity;
+                cout<<std::setw(20)<<itemList[ingredientIndex].name<<" "<<std::setw(4)<<ingredientQuantity<<" ";
             }
+            cout<<endl;
         }
     }
 }
@@ -696,6 +727,40 @@ int main()
     level.push_back(ingredientInfo("steel plate",150,itemList));
     level.push_back(ingredientInfo("electrical engine",1,itemList));
     
+    //set procedureIndex and ToMake
+    for(unsigned int i = 0; i<itemList.size(); i++)
+    {
+        int procedureIndex = 0;
+        for(unsigned int j = 0; j<procedureList.size(); j++)
+        {
+            //ignore coal in mining station
+            if(buildingList[ procedureList[j].buildingIndex ].name == "mining station" &&
+               itemList[ procedureList[j].products[0].itemIndex ].name == "coal") continue;
+            
+            //set procedureIndex
+            for(unsigned int k = 0; k<procedureList[j].products.size(); k++)
+            {
+                int productIndex = procedureList[j].products[k].itemIndex;
+                if(i == productIndex)
+                {
+                    procedureIndex = j;
+                    itemList[i].procedureIndex = j;
+                }
+            }
+        }
+        
+        //set ToMake
+        for(unsigned int j = 0; j<procedureList[procedureIndex].ingredients.size(); j++)
+        {
+            int ingredientIndex = procedureList[procedureIndex].ingredients[j].itemIndex;
+            for(unsigned int k = 0; k<procedureList[procedureIndex].products.size(); k++)
+            {
+                int productIndex = procedureList[procedureIndex].products[k].itemIndex;
+                itemList[ingredientIndex].ToMake.push_back(productIndex);
+            }
+        }
+    }
+    
     //reservation for quest
     vector<ingredientInfo> quest;
     
@@ -703,17 +768,18 @@ int main()
     quest.push_back(ingredientInfo("motherboard",50,itemList));
     quest.push_back(ingredientInfo("insulated wire",1000,itemList));
     quest.push_back(ingredientInfo("steel plate",500,itemList));
-    FillIngredients("compressor",1,quest,itemList,procedureList);
-    FillIngredients("liquid nitrogen",1,quest,itemList,procedureList);
+    GainResources("nitrogen",10,quest,itemList,procedureList);
+    GainResources("compressor",1,quest,itemList,procedureList);
+    GainResources("liquid nitrogen",1,quest,itemList,procedureList);
     
     //Here I Go Crafting Again!
-    FillIngredients("optic fiber",10+50,quest,itemList,procedureList);
-    FillIngredients("compressor",10+50,quest,itemList,procedureList);
+    GainResources("optic fiber",10+50,quest,itemList,procedureList);
+    GainResources("compressor",10+50,quest,itemList,procedureList);
     
     //Quite The Goldsmith
-    FillIngredients("polished obsidian",10+100,quest,itemList,procedureList);
-    FillIngredients("polished sapphire",100+300,quest,itemList,procedureList);
-    FillIngredients("polished diamond",100+300,quest,itemList,procedureList);
+    GainResources("polished obsidian",10+100,quest,itemList,procedureList);
+    GainResources("polished sapphire",100+300,quest,itemList,procedureList);
+    GainResources("polished diamond",100+300,quest,itemList,procedureList);
     
     //Providing The Weaponry
     quest.push_back(ingredientInfo("obsidian knife",10+50+100,itemList));
@@ -850,33 +916,35 @@ int main()
     quest.push_back(ingredientInfo("steel bar",1060,itemList));
     
     //Large Obsidian Spear
-    FillIngredients("polished obsidian",2000,quest,itemList,procedureList);
+    GainResources("polished obsidian",2000,quest,itemList,procedureList);
+    GainResources("tree",4000,quest,itemList,procedureList);
     
     //Radiation Protection Unit
-    FillIngredients("copper bar",10000,quest,itemList,procedureList);
+    GainResources("silicon",3600,quest,itemList,procedureList);
+    GainResources("copper bar",10000,quest,itemList,procedureList);
     
     //Mementos
-    FillIngredients("gold bar",15000,quest,itemList,procedureList);
-    FillIngredients("silver bar",5000,quest,itemList,procedureList);
+    GainResources("gold bar",15000,quest,itemList,procedureList);
+    GainResources("silver bar",5000,quest,itemList,procedureList);
     
     //Craft The PC
-    FillIngredients("accumulator",240,quest,itemList,procedureList);
-    FillIngredients("motherboard",20,quest,itemList,procedureList);
-    FillIngredients("circuits",300,quest,itemList,procedureList);
+    GainResources("accumulator",240,quest,itemList,procedureList);
+    GainResources("motherboard",20,quest,itemList,procedureList);
+    GainResources("circuits",300,quest,itemList,procedureList);
     
     //Mini Tesla Coils
-    FillIngredients("polished amber",4000,quest,itemList,procedureList);
-    FillIngredients("insulated wire",2000,quest,itemList,procedureList);
-    FillIngredients("graphite",50000,quest,itemList,procedureList);
+    GainResources("polished amber",4000,quest,itemList,procedureList);
+    GainResources("insulated wire",2000,quest,itemList,procedureList);
+    GainResources("graphite",50000,quest,itemList,procedureList);
     
     //Shiny Arms For The MC!
-    FillIngredients("aluminium bar",10000,quest,itemList,procedureList);
-    FillIngredients("wire",50000,quest,itemList,procedureList);
-    FillIngredients("silver bar",10000,quest,itemList,procedureList);
-    FillIngredients("circuits",200,quest,itemList,procedureList);
+    GainResources("aluminium bar",10000,quest,itemList,procedureList);
+    GainResources("wire",50000,quest,itemList,procedureList);
+    GainResources("silver bar",10000,quest,itemList,procedureList);
+    GainResources("circuits",200,quest,itemList,procedureList);
     
     //The Answer To Life
-    FillIngredients("circuits",42,quest,itemList,procedureList);
+    quest.push_back(ingredientInfo("circuits",42,itemList));
     
     //Rocket Type A
     quest.push_back(ingredientInfo("steel plate",50,itemList));
@@ -935,45 +1003,15 @@ int main()
     quest.push_back(ingredientInfo("lutetium bar",40,itemList));
     
     //Asteroid Mining
-    FillIngredients("hydrochloric acid",5,quest,itemList,procedureList);
-    FillIngredients("chipset",5,quest,itemList,procedureList);
-    FillIngredients("lutetium",5,quest,itemList,procedureList);
-    FillIngredients("lutetium bar",1,quest,itemList,procedureList);
+    GainResources("sodium chloride",100,quest,itemList,procedureList);
+    GainResources("hydrochloric acid",5,quest,itemList,procedureList);
+    GainResources("chipset",5,quest,itemList,procedureList);
+    GainResources("lutetium ore",100,quest,itemList,procedureList);
+    GainResources("lutetium",5,quest,itemList,procedureList);
+    GainResources("lutetium bar",1,quest,itemList,procedureList);
 
     /////////
-    //set procedureIndex and ToMake
-    for(unsigned int i = 0; i<itemList.size(); i++)
-    {
-        int procedureIndex = 0;
-        for(unsigned int j = 0; j<procedureList.size(); j++)
-        {
-            //ignore coal in mining station
-            if(buildingList[ procedureList[j].buildingIndex ].name == "mining station" &&
-               itemList[ procedureList[j].products[0].itemIndex ].name == "coal") continue;
-            
-            //set procedureIndex
-            for(unsigned int k = 0; k<procedureList[j].products.size(); k++)
-            {
-                int productIndex = procedureList[j].products[k].itemIndex;
-                if(i == productIndex)
-                {
-                    procedureIndex = j;
-                    itemList[i].procedureIndex = j;
-                }
-            }
-        }
-        
-        //set ToMake
-        for(unsigned int j = 0; j<procedureList[procedureIndex].ingredients.size(); j++)
-        {
-            int ingredientIndex = procedureList[procedureIndex].ingredients[j].itemIndex;
-            for(unsigned int k = 0; k<procedureList[procedureIndex].products.size(); k++)
-            {
-                int productIndex = procedureList[procedureIndex].products[k].itemIndex;
-                itemList[ingredientIndex].ToMake.push_back(productIndex);
-            }
-        }
-    }
+
     
     //set isConsiderIngredientTime to true
     procedureInfo::setConsiderIngredientTime("iron bar",itemList,procedureList);
@@ -1069,38 +1107,70 @@ int main()
     itemInfo::set_reservation_level(itemList,level);
     itemInfo::set_reservation_quest(itemList,quest);
     
-    //print hierarchy
-    for(unsigned int i = 0; i<hierarchy.size(); i++)
+    //set total_level and total_quest
+    for(unsigned int i = 0; i<itemList.size(); i++)
     {
-        cout<<"Tier "<<i<<":"<<endl;
+        itemList[i].total_level = itemList[i].reservation_level;
+        itemList[i].total_quest = itemList[i].reservation_quest;
+    }
+    
+    for(unsigned long i = hierarchy.size()-1; i>=1; i--)
+    {
         for(unsigned int j = 0; j<hierarchy[i].size(); j++)
         {
             int itemIndex = hierarchy[i][j];
-            cout<<std::setw(20)<<itemList[itemIndex].name;
-            if(itemList[itemIndex].ToMake.size() == 0) cout<<" (*)";
-            else cout<<"    ";
-            cout<<":";
-            
-            cout<<std::setw(5)<<itemList[itemIndex].reservation_level<<" "<<std::setw(6)<<itemList[itemIndex].reservation_quest;
-            cout<<":";
-            
+            if(itemList[itemIndex].total_level + itemList[itemIndex].total_quest <= 0) continue;
             int procedureIndex = itemList[itemIndex].procedureIndex;
-            for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
+            if(procedureList[procedureIndex].products.size() == 1)
             {
-                int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
-                int ingredientQuantity = procedureList[procedureIndex].ingredients[k].quantity;
-                cout<<std::setw(20)<<itemList[ingredientIndex].name<<" "<<std::setw(4)<<ingredientQuantity<<" ";
+                for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
+                {
+                    int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
+                    itemList[ingredientIndex].total_level += procedureList[procedureIndex].ingredients[k].quantity * (itemList[itemIndex].total_level / procedureList[procedureIndex].products[0].quantity);
+                    itemList[ingredientIndex].total_quest += procedureList[procedureIndex].ingredients[k].quantity * (itemList[itemIndex].total_quest / procedureList[procedureIndex].products[0].quantity);
+                }
             }
-            cout<<endl;
+            else
+            {
+                //hydrogen or oxygen
+                cout<<"considering special case: "<<itemList[itemIndex].name<<" "<<itemList[itemIndex+1].name<<endl;
+                
+                //for level
+                double quantity_level_H = itemList[itemIndex].total_level / procedureList[procedureIndex].products[0].quantity;
+                double quantity_level_O = itemList[itemIndex+1].total_level / procedureList[procedureIndex].products[1].quantity;
+                double quantity_level;
+                if(quantity_level_H > quantity_level_O) quantity_level = quantity_level_H;
+                else quantity_level = quantity_level_O;
+                
+                //for quest
+                double quantity_quest_H = itemList[itemIndex].total_quest / procedureList[procedureIndex].products[0].quantity;
+                double quantity_quest_O = itemList[itemIndex+1].total_quest / procedureList[procedureIndex].products[1].quantity;
+                double quantity_quest;
+                if(quantity_quest_H > quantity_quest_O) quantity_quest = quantity_quest_H;
+                else quantity_quest = quantity_quest_O;
+                
+                for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
+                {
+                    int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
+                    itemList[ingredientIndex].total_level += procedureList[procedureIndex].ingredients[k].quantity * quantity_level;
+                    itemList[ingredientIndex].total_quest += procedureList[procedureIndex].ingredients[k].quantity * quantity_quest;
+                }
+                
+                //skip for oxygen
+                j++;
+            }
         }
-        
+        //printHierarchy(hierarchy,itemList,procedureList);
     }
+    
+    
+    //print hierarchy
+    printHierarchy(hierarchy,itemList,procedureList);
     
     //print
     for(unsigned int i = 0; i<itemList.size(); i++)
     {
         //cout<<std::setw(20)<<itemList[i].name<<": "<<std::setw(8)<<itemList[i].timePerPiece<<" "<<std::setw(9)<<itemList[i].pricePerTime<<endl;
-        //cout<<std::setw(20)<<itemList[i].name<<": "<<std::setw(5)<<itemList[i].reservation_level<<" "<<std::setw(6)<<itemList[i].reservation_quest<<endl;
     }
     
     return 0;
