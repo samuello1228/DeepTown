@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 using namespace std;
@@ -15,7 +16,9 @@ class itemInfo
     {
         name = newName;
         price = newPrice;
+        ToMake.clear();
         reservation_level = 0;
+        reservation_quest = 0;
     }
     
     static int findItem(string itemName, vector<itemInfo>& itemList)
@@ -37,6 +40,8 @@ class itemInfo
     double price;
     double timePerPiece;
     double pricePerTime;
+    int procedureIndex;
+    vector<int> ToMake;
     
     int reservation_level;
     int reservation_quest;
@@ -183,15 +188,10 @@ class procedureInfo
     static void setConsiderIngredientTime(string ProductName, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
     {
         int itemIndex1 = itemInfo::findItem(ProductName,itemList);
-        for(unsigned int i = 0; i<procedureList.size(); i++)
-        {
-            int itemIndex2 = procedureList[i].products[0].itemIndex;
-            if(itemIndex1 == itemIndex2)
-            {
-                if(procedureList[i].ingredients.size() == 0) return;
-                procedureList[i].isConsiderIngredientTime = true;
-            }
-        }
+        int procedureIndex = itemList[itemIndex1].procedureIndex;
+        
+        if(procedureList[procedureIndex].ingredients.size() == 0) return;
+        procedureList[procedureIndex].isConsiderIngredientTime = true;
     }
     
     double setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList);
@@ -473,6 +473,12 @@ int main()
     buildingList.push_back(buildingInfo("water collector",1));
     procedureList.push_back(procedureInfo("water collector",60,"water",7,buildingList,itemList));
     
+    //seed store
+    buildingList.push_back(buildingInfo("seed store",1));
+    procedureList.push_back(procedureInfo("seed store",0,"tree seed",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("seed store",0,"liana seed",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("seed store",0,"grape seed",1,buildingList,itemList));
+    
     //greenhouse
     buildingList.push_back(buildingInfo("greenhouse",2));
     procedureList.push_back(procedureInfo("greenhouse","tree seed",1,"water",10,30*60,"tree",10,buildingList,itemList));
@@ -561,47 +567,6 @@ int main()
     //uranium enrichment
     buildingList.push_back(buildingInfo("uranium enrichment",2));
     procedureList.push_back(procedureInfo("uranium enrichment","uranium",100,"sodium",50,10*60,"uranium rod",1,buildingList,itemList));
-    
-    //set isConsiderIngredientTime to true
-    procedureInfo::setConsiderIngredientTime("iron bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("glass",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("steel bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("silver bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("coal",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gold bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("steel plate",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("titanium bar",itemList,procedureList);
-    
-    procedureInfo::setConsiderIngredientTime("graphite",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("circuits",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("lamp",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("lab flask",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("green laser",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("diamond cutter",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("solid propellant",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("accumulator",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("solar panel",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gear",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("bomb",itemList,procedureList);
-    
-    procedureInfo::setConsiderIngredientTime("rubber",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("refined oil",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("plastic plate",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("titanium",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("diethyl ether",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gunpowder",itemList,procedureList);
-    
-    procedureInfo::setConsiderIngredientTime("maya calendar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("haircomb",itemList,procedureList);
-    //procedureInfo::setConsiderIngredientTime("obsidian knife",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("polished diamond",itemList,procedureList);
-    //procedureInfo::setConsiderIngredientTime("",itemList,procedureList);
-    
-    //calculate limiting time per piece
-    for(unsigned int i = 0; i<itemList.size(); i++)
-    {
-        itemList[i].setTimePerPiece(itemList,procedureList,buildingList);
-    }
     
     //reservation for level upgrade
     vector<ingredientInfo> level;
@@ -730,8 +695,6 @@ int main()
     //level 440
     level.push_back(ingredientInfo("steel plate",150,itemList));
     level.push_back(ingredientInfo("electrical engine",1,itemList));
-    
-    itemInfo::set_reservation_level(itemList,level);
     
     //reservation for quest
     vector<ingredientInfo> quest;
@@ -976,16 +939,168 @@ int main()
     FillIngredients("chipset",5,quest,itemList,procedureList);
     FillIngredients("lutetium",5,quest,itemList,procedureList);
     FillIngredients("lutetium bar",1,quest,itemList,procedureList);
+
+    /////////
+    //set procedureIndex and ToMake
+    for(unsigned int i = 0; i<itemList.size(); i++)
+    {
+        int procedureIndex = 0;
+        for(unsigned int j = 0; j<procedureList.size(); j++)
+        {
+            //ignore coal in mining station
+            if(buildingList[ procedureList[j].buildingIndex ].name == "mining station" &&
+               itemList[ procedureList[j].products[0].itemIndex ].name == "coal") continue;
+            
+            //set procedureIndex
+            for(unsigned int k = 0; k<procedureList[j].products.size(); k++)
+            {
+                int productIndex = procedureList[j].products[k].itemIndex;
+                if(i == productIndex)
+                {
+                    procedureIndex = j;
+                    itemList[i].procedureIndex = j;
+                }
+            }
+        }
+        
+        //set ToMake
+        for(unsigned int j = 0; j<procedureList[procedureIndex].ingredients.size(); j++)
+        {
+            int ingredientIndex = procedureList[procedureIndex].ingredients[j].itemIndex;
+            for(unsigned int k = 0; k<procedureList[procedureIndex].products.size(); k++)
+            {
+                int productIndex = procedureList[procedureIndex].products[k].itemIndex;
+                itemList[ingredientIndex].ToMake.push_back(productIndex);
+            }
+        }
+    }
     
+    //set isConsiderIngredientTime to true
+    procedureInfo::setConsiderIngredientTime("iron bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("glass",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("steel bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("silver bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("coal",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("gold bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("steel plate",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("titanium bar",itemList,procedureList);
+    
+    procedureInfo::setConsiderIngredientTime("graphite",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("circuits",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("lamp",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("lab flask",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("green laser",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("diamond cutter",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("solid propellant",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("accumulator",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("solar panel",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("gear",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("bomb",itemList,procedureList);
+    
+    procedureInfo::setConsiderIngredientTime("rubber",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("refined oil",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("plastic plate",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("titanium",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("diethyl ether",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("gunpowder",itemList,procedureList);
+    
+    procedureInfo::setConsiderIngredientTime("maya calendar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("haircomb",itemList,procedureList);
+    //procedureInfo::setConsiderIngredientTime("obsidian knife",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("polished diamond",itemList,procedureList);
+    //procedureInfo::setConsiderIngredientTime("",itemList,procedureList);
+    
+    //Find hierarchy
+    vector< vector<int> > hierarchy;
+    while(true)
+    {
+        bool isEnd = true;
+        vector<int> newHierarchy;
+        for(unsigned int i = 0; i<itemList.size(); i++)
+        {
+            //decide whether the item is inside the hierarchy
+            bool isFound = false;
+            for(unsigned int j = 0; j<hierarchy.size(); j++)
+            {
+                for(unsigned int k = 0; k<hierarchy[j].size(); k++)
+                {
+                    if(i == hierarchy[j][k]) isFound = true;
+                }
+            }
+            
+            if(isFound) continue;
+            //add item in the hierarchy
+            
+            //decide whether all ingredients are inside the hierarchy
+            bool isFoundAllIngredients = true;
+            for(unsigned int j = 0; j<procedureList[ itemList[i].procedureIndex ].ingredients.size(); j++)
+            {
+                bool isFoundIngredient = false;
+                for(unsigned int k = 0; k<hierarchy.size(); k++)
+                {
+                    for(unsigned int m = 0; m<hierarchy[k].size(); m++)
+                    {
+                        if(procedureList[ itemList[i].procedureIndex ].ingredients[j].itemIndex == hierarchy[k][m]) isFoundIngredient = true;
+                    }
+                }
+                if(!isFoundIngredient) isFoundAllIngredients = false;
+            }
+            
+            if(!isFoundAllIngredients)
+            {
+                isEnd = false;
+                continue;
+            }
+            
+            //add into the new hierarchy
+            newHierarchy.push_back(i);
+        }
+        
+        hierarchy.push_back(newHierarchy);
+        if(isEnd) break;
+    }
+    
+    //calculate limiting time per piece
+    for(unsigned int i = 0; i<itemList.size(); i++)
+    {
+        itemList[i].setTimePerPiece(itemList,procedureList,buildingList);
+    }
+
+    itemInfo::set_reservation_level(itemList,level);
     itemInfo::set_reservation_quest(itemList,quest);
+    
+    //print hierarchy
+    for(unsigned int i = 0; i<hierarchy.size(); i++)
+    {
+        cout<<"Tier "<<i<<":"<<endl;
+        for(unsigned int j = 0; j<hierarchy[i].size(); j++)
+        {
+            int itemIndex = hierarchy[i][j];
+            cout<<std::setw(20)<<itemList[itemIndex].name;
+            if(itemList[itemIndex].ToMake.size() == 0) cout<<" (*)";
+            else cout<<"    ";
+            cout<<":";
+            
+            cout<<std::setw(5)<<itemList[itemIndex].reservation_level<<" "<<std::setw(6)<<itemList[itemIndex].reservation_quest;
+            cout<<":";
+            
+            int procedureIndex = itemList[itemIndex].procedureIndex;
+            for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
+            {
+                int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
+                int ingredientQuantity = procedureList[procedureIndex].ingredients[k].quantity;
+                cout<<std::setw(20)<<itemList[ingredientIndex].name<<" "<<std::setw(4)<<ingredientQuantity<<" ";
+            }
+            cout<<endl;
+        }
+        
+    }
     
     //print
     for(unsigned int i = 0; i<itemList.size(); i++)
     {
-        cout<<itemList[i].name<<": "<<itemList[i].timePerPiece<<" "<<itemList[i].pricePerTime<<endl;
-        //cout<<itemList[i].name<<": "<<itemList[i].reservation_level<<endl;
-        //cout<<itemList[i].name<<": "<<itemList[i].reservation_quest<<endl;
-        //cout<<itemList[i].name<<": "<<itemList[i].reservation_level<<" "<<itemList[i].reservation_quest<<endl;
+        //cout<<std::setw(20)<<itemList[i].name<<": "<<std::setw(8)<<itemList[i].timePerPiece<<" "<<std::setw(9)<<itemList[i].pricePerTime<<endl;
+        //cout<<std::setw(20)<<itemList[i].name<<": "<<std::setw(5)<<itemList[i].reservation_level<<" "<<std::setw(6)<<itemList[i].reservation_quest<<endl;
     }
     
     return 0;
