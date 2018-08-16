@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
+#include <math.h>
 using namespace std;
 class itemInfo;
 class buildingInfo;
@@ -19,8 +20,8 @@ class itemInfo
         ToMake.clear();
         reservation_level = 0;
         reservation_quest = 0;
-        total_level = 0;
-        total_quest = 0;
+        isAvailable = true;
+        currentQuantity = 0;
     }
     
     static int findItem(string itemName, vector<itemInfo>& itemList)
@@ -38,6 +39,14 @@ class itemInfo
     static void set_reservation_level(vector<itemInfo>& itemList, vector<ingredientInfo>& level);
     static void set_reservation_quest(vector<itemInfo>& itemList, vector<ingredientInfo>& quest);
     
+    static void set_currentQuantity(string itemName, double quantity, vector<itemInfo>& itemList)
+    {
+        int itemIndex = itemInfo::findItem(itemName,itemList);
+        
+        if(quantity == -1) itemList[itemIndex].isAvailable = false;
+        else itemList[itemIndex].currentQuantity = quantity;
+    }
+    
     string name;
     double price;
     double timePerPiece;
@@ -45,10 +54,13 @@ class itemInfo
     int procedureIndex;
     vector<int> ToMake;
     
-    int reservation_level;
-    int reservation_quest;
-    double total_level;
-    double total_quest;
+    double reservation_level;
+    double reservation_quest;
+    double reservation_total;
+    double total;
+    
+    bool isAvailable;
+    double currentQuantity;
 };
 
 class buildingInfo
@@ -273,14 +285,14 @@ void itemInfo::set_reservation_quest(vector<itemInfo>& itemList, vector<ingredie
     }
 }
 
-void GainResources(string itemName, int quantity, vector<ingredientInfo>& quest, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
+void GainResources(string itemName, double quantity, vector<ingredientInfo>& quest, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
 {
     int itemIndex = itemInfo::findItem(itemName,itemList);
     int procedureIndex = itemList[itemIndex].procedureIndex;
     for(unsigned int i = 0; i<procedureList[procedureIndex].ingredients.size(); i++)
     {
         int ingredientIndex = procedureList[procedureIndex].ingredients[i].itemIndex;
-        int totalQuantity = procedureList[procedureIndex].ingredients[i].quantity * (double(quantity) / procedureList[procedureIndex].products[0].quantity) ;
+        double totalQuantity = procedureList[procedureIndex].ingredients[i].quantity * (double(quantity) / procedureList[procedureIndex].products[0].quantity) ;
         quest.push_back(ingredientInfo(itemList[ingredientIndex].name, totalQuantity, itemList));
     }
     
@@ -295,24 +307,35 @@ void printHierarchy(vector< vector<int> >& hierarchy, vector<itemInfo>& itemList
         for(unsigned int j = 0; j<hierarchy[i].size(); j++)
         {
             int itemIndex = hierarchy[i][j];
+            double quantity_diff = itemList[itemIndex].total - itemList[itemIndex].currentQuantity;
+            if(quantity_diff <= 0) continue;
+            if(!itemList[itemIndex].isAvailable) continue;
+            
             cout<<std::setw(20)<<itemList[itemIndex].name;
             if(itemList[itemIndex].ToMake.size() == 0) cout<<" (*)";
             else cout<<"    ";
+            
+            if(quantity_diff <= 0) cout<<"  OK";
+            else if(!itemList[itemIndex].isAvailable) cout<<"  NA";
+            else if(itemList[itemIndex].reservation_total == itemList[itemIndex].total) cout<<" END"; //is end
+            else if(quantity_diff <= itemList[itemIndex].reservation_total) cout<<" SLF"; //to self-fill
+            else cout<<" TRF"; //transfer
+            
             cout<<":";
             
             cout<<std::setw(5)<<itemList[itemIndex].reservation_level<<" ";
-            cout<<std::setw(7)<<itemList[itemIndex].total_level<<" ";
             cout<<std::setw(6)<<itemList[itemIndex].reservation_quest<<" ";
-            cout<<std::setw(11)<<itemList[itemIndex].total_quest<<" ";
-            cout<<std::setw(7)<<int(itemList[itemIndex].reservation_level+itemList[itemIndex].reservation_quest);
-            cout<<std::setw(7)<<int(itemList[itemIndex].total_level+itemList[itemIndex].total_quest);
+            cout<<std::setw(7)<<ceil(itemList[itemIndex].reservation_total)<<" ";
+            cout<<std::setw(7)<<int(ceil(itemList[itemIndex].total));
+            if(quantity_diff <= 0) cout<<std::setw(8)<<0;
+            else cout<<std::setw(8)<<int(ceil(quantity_diff));
             cout<<":";
             
             int procedureIndex = itemList[itemIndex].procedureIndex;
             for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
             {
                 int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
-                int ingredientQuantity = procedureList[procedureIndex].ingredients[k].quantity;
+                double ingredientQuantity = procedureList[procedureIndex].ingredients[k].quantity;
                 cout<<std::setw(20)<<itemList[ingredientIndex].name<<" "<<std::setw(4)<<ingredientQuantity<<" ";
             }
             cout<<endl;
@@ -324,6 +347,8 @@ int main()
 {
     //item list
     vector<itemInfo> itemList;
+    
+    //Raw
     itemList.push_back(itemInfo("coal",1));
     itemList.push_back(itemInfo("copper",2));
     itemList.push_back(itemInfo("iron",3));
@@ -341,58 +366,46 @@ int main()
     itemList.push_back(itemInfo("titanium ore",19));
     itemList.push_back(itemInfo("alexandrite",19));
     itemList.push_back(itemInfo("uranium",22));
+    
     itemList.push_back(itemInfo("obsidian",20));
     itemList.push_back(itemInfo("helium 3",400));
-    
     itemList.push_back(itemInfo("sodium chloride",100));
     itemList.push_back(itemInfo("lutetium ore",500));
     
-    itemList.push_back(itemInfo("silicon",100));
-    itemList.push_back(itemInfo("sulfur",100));
-    itemList.push_back(itemInfo("sodium",100));
-    itemList.push_back(itemInfo("nitrogen",300));
-    
-    itemList.push_back(itemInfo("oil",21));
-    itemList.push_back(itemInfo("water",5));
-    
-    itemList.push_back(itemInfo("tree seed",20));
-    itemList.push_back(itemInfo("liana seed",1000));
-    itemList.push_back(itemInfo("grape seed",1200));
-    itemList.push_back(itemInfo("tree",193));
-    itemList.push_back(itemInfo("liana",1700));
-    itemList.push_back(itemInfo("grape",1500));
-    
+    //smelting
     itemList.push_back(itemInfo("copper bar",25));
     itemList.push_back(itemInfo("iron bar",40));
-    itemList.push_back(itemInfo("glass",450));
     itemList.push_back(itemInfo("aluminium bar",50));
     itemList.push_back(itemInfo("steel bar",180));
     itemList.push_back(itemInfo("silver bar",200));
     itemList.push_back(itemInfo("gold bar",250));
+    itemList.push_back(itemInfo("lab flask",800));
     itemList.push_back(itemInfo("steel plate",1800));
     itemList.push_back(itemInfo("titanium bar",3000));
+    itemList.push_back(itemInfo("diamond cutter",5000));
+    itemList.push_back(itemInfo("motherboard",17000));
+    
     itemList.push_back(itemInfo("magnetite bar",137000));
     itemList.push_back(itemInfo("lutetium bar",68000));
     
-    itemList.push_back(itemInfo("graphite",15));
+    //craft
     itemList.push_back(itemInfo("copper nail",7));
+    itemList.push_back(itemInfo("amber insulation",125));
+    itemList.push_back(itemInfo("solar panel",69000));
+    itemList.push_back(itemInfo("graphite",15));
+    itemList.push_back(itemInfo("green laser",400));
     itemList.push_back(itemInfo("wire",15));
-    itemList.push_back(itemInfo("battery",200));
-    itemList.push_back(itemInfo("circuits",2070));
-    itemList.push_back(itemInfo("lamp",760));
-    itemList.push_back(itemInfo("lab flask",800));
+    itemList.push_back(itemInfo("insulated wire",750));
     itemList.push_back(itemInfo("amber charger",4));
     itemList.push_back(itemInfo("aluminium bottle",55));
-    itemList.push_back(itemInfo("amber insulation",125));
-    itemList.push_back(itemInfo("insulated wire",750));
-    itemList.push_back(itemInfo("green laser",400));
-    itemList.push_back(itemInfo("diamond cutter",5000));
-    itemList.push_back(itemInfo("motherboard",17000));
-    itemList.push_back(itemInfo("solid propellant",27000));
-    itemList.push_back(itemInfo("accumulator",9000));
-    itemList.push_back(itemInfo("solar panel",69000));
-    itemList.push_back(itemInfo("gear",18500));
     itemList.push_back(itemInfo("bomb",55500));
+    itemList.push_back(itemInfo("gear",18500));
+    itemList.push_back(itemInfo("battery",200));
+    itemList.push_back(itemInfo("lamp",760));
+    itemList.push_back(itemInfo("accumulator",9000));
+    itemList.push_back(itemInfo("solid propellant",27000));
+    itemList.push_back(itemInfo("circuits",2070));
+    
     itemList.push_back(itemInfo("compressor",44000));
     itemList.push_back(itemInfo("optic fiber",10500));
     itemList.push_back(itemInfo("dry ice",140000));
@@ -400,17 +413,27 @@ int main()
     itemList.push_back(itemInfo("electrical engine",745000));
     itemList.push_back(itemInfo("chipset",40000));
     
-    itemList.push_back(itemInfo("clean water",1200));
+    //chemistry
+    itemList.push_back(itemInfo("water",5));
+    itemList.push_back(itemInfo("oil",21));
+    itemList.push_back(itemInfo("sodium",100));
+    itemList.push_back(itemInfo("sulfur",100));
+    itemList.push_back(itemInfo("silicon",100));
+    itemList.push_back(itemInfo("titanium",260));
+    itemList.push_back(itemInfo("nitrogen",300));
     itemList.push_back(itemInfo("hydrogen",400));
+    itemList.push_back(itemInfo("glass",450));
     itemList.push_back(itemInfo("oxygen",900));
-    itemList.push_back(itemInfo("rubber",4000));
+    itemList.push_back(itemInfo("clean water",1200));
+    itemList.push_back(itemInfo("gunpowder",2500));
     itemList.push_back(itemInfo("sulfuric acid",3500));
+    itemList.push_back(itemInfo("rubber",4000));
     itemList.push_back(itemInfo("ethanol",4200));
     itemList.push_back(itemInfo("refined oil",16500));
-    itemList.push_back(itemInfo("plastic plate",40000));
-    itemList.push_back(itemInfo("titanium",260));
     itemList.push_back(itemInfo("diethyl ether",17000));
-    itemList.push_back(itemInfo("gunpowder",2500));
+    itemList.push_back(itemInfo("uranium rod",17000));
+    itemList.push_back(itemInfo("plastic plate",40000));
+    
     itemList.push_back(itemInfo("liquid nitrogen",12500));
     itemList.push_back(itemInfo("magnetite ore",12500));
     itemList.push_back(itemInfo("enhanced helium 3",190000));
@@ -418,24 +441,32 @@ int main()
     itemList.push_back(itemInfo("hydrochloric acid",12000));
     itemList.push_back(itemInfo("lutetium",13500));
     
+    //jewel
     int tradingLevel = 50;
     double SF = (1 + 0.02 * (tradingLevel-1)) * 1.35;
     itemList.push_back(itemInfo("polished amber",70));
-    itemList.push_back(itemInfo("emerald ring",450*SF));
-    itemList.push_back(itemInfo("amber bracelet",280*SF));
-    itemList.push_back(itemInfo("maya calendar",6000*SF));
-    itemList.push_back(itemInfo("haircomb",14000*SF));
-    itemList.push_back(itemInfo("obsidian knife",32000*SF));
     itemList.push_back(itemInfo("polished emerald",160));
     itemList.push_back(itemInfo("polished topaz",200));
-    itemList.push_back(itemInfo("polished ruby",250));
-    itemList.push_back(itemInfo("polished diamond",300));
     itemList.push_back(itemInfo("polished sapphire",230));
+    itemList.push_back(itemInfo("polished ruby",250));
     itemList.push_back(itemInfo("polished amethyst",250));
     itemList.push_back(itemInfo("polished alexandrite",270));
-    itemList.push_back(itemInfo("polished obsidian",280));
+    itemList.push_back(itemInfo("amber bracelet",280*SF));
+    itemList.push_back(itemInfo("polished diamond",300));
+    itemList.push_back(itemInfo("emerald ring",450*SF));
+    itemList.push_back(itemInfo("maya calendar",6000*SF));
+    itemList.push_back(itemInfo("haircomb",14000*SF));
     
-    itemList.push_back(itemInfo("uranium rod",17000));
+    itemList.push_back(itemInfo("polished obsidian",280));
+    itemList.push_back(itemInfo("obsidian knife",32000*SF));
+    
+    //tree
+    itemList.push_back(itemInfo("tree seed",20));
+    itemList.push_back(itemInfo("tree",193));
+    itemList.push_back(itemInfo("liana seed",1000));
+    itemList.push_back(itemInfo("grape seed",1200));
+    itemList.push_back(itemInfo("grape",1500));
+    itemList.push_back(itemInfo("liana",1700));
     
     //mining station
     vector<buildingInfo> buildingList;
@@ -1048,6 +1079,124 @@ int main()
     procedureInfo::setConsiderIngredientTime("polished diamond",itemList,procedureList);
     //procedureInfo::setConsiderIngredientTime("",itemList,procedureList);
     
+    //Raw
+    itemInfo::set_currentQuantity("coal",240000,itemList);
+    itemInfo::set_currentQuantity("copper",580000,itemList);
+    itemInfo::set_currentQuantity("iron",300000,itemList);
+    itemInfo::set_currentQuantity("amber",70000,itemList);
+    itemInfo::set_currentQuantity("aluminium",700000,itemList);
+    itemInfo::set_currentQuantity("silver",220000,itemList);
+    itemInfo::set_currentQuantity("gold",540000,itemList);
+    itemInfo::set_currentQuantity("emerald",200000,itemList);
+    itemInfo::set_currentQuantity("platinum",29000,itemList);
+    itemInfo::set_currentQuantity("topaz",200000,itemList);
+    itemInfo::set_currentQuantity("ruby",300000,itemList);
+    itemInfo::set_currentQuantity("sapphire",100000,itemList);
+    itemInfo::set_currentQuantity("amethyst",200000,itemList);
+    itemInfo::set_currentQuantity("diamond",40000,itemList);
+    itemInfo::set_currentQuantity("titanium ore",50000,itemList);
+    itemInfo::set_currentQuantity("alexandrite",150000,itemList);
+    itemInfo::set_currentQuantity("uranium",20000,itemList);
+    
+    itemInfo::set_currentQuantity("obsidian",-1,itemList);
+    itemInfo::set_currentQuantity("helium 3",-1,itemList);
+    itemInfo::set_currentQuantity("sodium chloride",-1,itemList);
+    itemInfo::set_currentQuantity("lutetium ore",-1,itemList);
+    
+    //smelting
+    itemInfo::set_currentQuantity("copper bar",80000,itemList);
+    itemInfo::set_currentQuantity("iron bar",50000,itemList);
+    itemInfo::set_currentQuantity("aluminium bar",56457,itemList);
+    itemInfo::set_currentQuantity("steel bar",3000,itemList);
+    itemInfo::set_currentQuantity("silver bar",11000,itemList);
+    itemInfo::set_currentQuantity("gold bar",14000,itemList);
+    itemInfo::set_currentQuantity("lab flask",10000,itemList);
+    itemInfo::set_currentQuantity("steel plate",6210,itemList);
+    itemInfo::set_currentQuantity("titanium bar",3800,itemList);
+    itemInfo::set_currentQuantity("diamond cutter",2200,itemList);
+    itemInfo::set_currentQuantity("motherboard",130,itemList);
+    
+    itemInfo::set_currentQuantity("magnetite bar",-1,itemList);
+    itemInfo::set_currentQuantity("lutetium bar",-1,itemList);
+    
+    //craft
+    itemInfo::set_currentQuantity("copper nail",131000,itemList);
+    itemInfo::set_currentQuantity("amber insulation",12506,itemList);
+    itemInfo::set_currentQuantity("solar panel",678,itemList);
+    itemInfo::set_currentQuantity("graphite",81000,itemList);
+    itemInfo::set_currentQuantity("green laser",7847,itemList);
+    itemInfo::set_currentQuantity("wire",110000,itemList);
+    itemInfo::set_currentQuantity("insulated wire",24000,itemList);
+    itemInfo::set_currentQuantity("amber charger",8000,itemList);
+    itemInfo::set_currentQuantity("aluminium bottle",28000,itemList);
+    itemInfo::set_currentQuantity("bomb",84,itemList);
+    itemInfo::set_currentQuantity("gear",441,itemList);
+    itemInfo::set_currentQuantity("battery",3148,itemList);
+    itemInfo::set_currentQuantity("lamp",2952,itemList);
+    itemInfo::set_currentQuantity("accumulator",2567,itemList);
+    itemInfo::set_currentQuantity("solid propellant",40,itemList);
+    itemInfo::set_currentQuantity("circuits",1302,itemList);
+    
+    itemInfo::set_currentQuantity("compressor",-1,itemList);
+    itemInfo::set_currentQuantity("optic fiber",-1,itemList);
+    itemInfo::set_currentQuantity("dry ice",-1,itemList);
+    itemInfo::set_currentQuantity("magnet",-1,itemList);
+    itemInfo::set_currentQuantity("electrical engine",-1,itemList);
+    itemInfo::set_currentQuantity("chipset",-1,itemList);
+    
+    //chemistry
+    itemInfo::set_currentQuantity("water",40000,itemList);
+    itemInfo::set_currentQuantity("oil",12000,itemList);
+    itemInfo::set_currentQuantity("sodium",10000,itemList);
+    itemInfo::set_currentQuantity("sulfur",10000,itemList);
+    itemInfo::set_currentQuantity("silicon",90000,itemList);
+    itemInfo::set_currentQuantity("titanium",13000,itemList);
+    itemInfo::set_currentQuantity("nitrogen",-1,itemList);
+    itemInfo::set_currentQuantity("hydrogen",6000,itemList);
+    itemInfo::set_currentQuantity("glass",3600,itemList);
+    itemInfo::set_currentQuantity("oxygen",4000,itemList);
+    itemInfo::set_currentQuantity("clean water",1400,itemList);
+    itemInfo::set_currentQuantity("gunpowder",4070,itemList);
+    itemInfo::set_currentQuantity("sulfuric acid",486,itemList);
+    itemInfo::set_currentQuantity("rubber",1558,itemList);
+    itemInfo::set_currentQuantity("ethanol",105,itemList);
+    itemInfo::set_currentQuantity("refined oil",96,itemList);
+    itemInfo::set_currentQuantity("diethyl ether",161,itemList);
+    itemInfo::set_currentQuantity("uranium rod",499,itemList);
+    itemInfo::set_currentQuantity("plastic plate",146,itemList);
+    
+    itemInfo::set_currentQuantity("liquid nitrogen",-1,itemList);
+    itemInfo::set_currentQuantity("magnetite ore",-1,itemList);
+    itemInfo::set_currentQuantity("enhanced helium 3",-1,itemList);
+    itemInfo::set_currentQuantity("toxic bomb",-1,itemList);
+    itemInfo::set_currentQuantity("hydrochloric acid",-1,itemList);
+    itemInfo::set_currentQuantity("lutetium",-1,itemList);
+    
+    //jewel
+    itemInfo::set_currentQuantity("polished amber",3000,itemList);
+    itemInfo::set_currentQuantity("polished emerald",100000,itemList);
+    itemInfo::set_currentQuantity("polished topaz",13000,itemList);
+    itemInfo::set_currentQuantity("polished sapphire",3000,itemList);
+    itemInfo::set_currentQuantity("polished ruby",60000,itemList);
+    itemInfo::set_currentQuantity("polished amethyst",3000,itemList);
+    itemInfo::set_currentQuantity("polished alexandrite",1277,itemList);
+    itemInfo::set_currentQuantity("amber bracelet",0,itemList);
+    itemInfo::set_currentQuantity("polished diamond",20000,itemList);
+    itemInfo::set_currentQuantity("emerald ring",0,itemList);
+    itemInfo::set_currentQuantity("maya calendar",0,itemList);
+    itemInfo::set_currentQuantity("haircomb",0,itemList);
+    
+    itemInfo::set_currentQuantity("polished obsidian",-1,itemList);
+    itemInfo::set_currentQuantity("obsidian knife",-1,itemList);
+    
+    //tree
+    itemInfo::set_currentQuantity("tree seed",3284,itemList);
+    itemInfo::set_currentQuantity("tree",488,itemList);
+    itemInfo::set_currentQuantity("liana seed",170,itemList);
+    itemInfo::set_currentQuantity("grape seed",170,itemList);
+    itemInfo::set_currentQuantity("grape",1050,itemList);
+    itemInfo::set_currentQuantity("liana",584,itemList);
+    
     //Find hierarchy
     vector< vector<int> > hierarchy;
     while(true)
@@ -1107,11 +1256,11 @@ int main()
     itemInfo::set_reservation_level(itemList,level);
     itemInfo::set_reservation_quest(itemList,quest);
     
-    //set total_level and total_quest
+    //set total and
     for(unsigned int i = 0; i<itemList.size(); i++)
     {
-        itemList[i].total_level = itemList[i].reservation_level;
-        itemList[i].total_quest = itemList[i].reservation_quest;
+        itemList[i].reservation_total = itemList[i].reservation_level + itemList[i].reservation_quest;
+        itemList[i].total = itemList[i].reservation_total;
     }
     
     for(unsigned long i = hierarchy.size()-1; i>=1; i--)
@@ -1119,15 +1268,19 @@ int main()
         for(unsigned int j = 0; j<hierarchy[i].size(); j++)
         {
             int itemIndex = hierarchy[i][j];
-            if(itemList[itemIndex].total_level + itemList[itemIndex].total_quest <= 0) continue;
             int procedureIndex = itemList[itemIndex].procedureIndex;
+            
             if(procedureList[procedureIndex].products.size() == 1)
             {
+                double quantity_diff = itemList[itemIndex].total - itemList[itemIndex].currentQuantity;
+                if(quantity_diff <= 0) continue;
+                
                 for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
                 {
                     int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
-                    itemList[ingredientIndex].total_level += procedureList[procedureIndex].ingredients[k].quantity * (itemList[itemIndex].total_level / procedureList[procedureIndex].products[0].quantity);
-                    itemList[ingredientIndex].total_quest += procedureList[procedureIndex].ingredients[k].quantity * (itemList[itemIndex].total_quest / procedureList[procedureIndex].products[0].quantity);
+                    double TotalQuantity = procedureList[procedureIndex].ingredients[k].quantity * (quantity_diff / procedureList[procedureIndex].products[0].quantity);
+                    itemList[ingredientIndex].total += TotalQuantity;
+                    if(!itemList[itemIndex].isAvailable) itemList[ingredientIndex].reservation_total += TotalQuantity;
                 }
             }
             else
@@ -1135,25 +1288,20 @@ int main()
                 //hydrogen or oxygen
                 cout<<"considering special case: "<<itemList[itemIndex].name<<" "<<itemList[itemIndex+1].name<<endl;
                 
-                //for level
-                double quantity_level_H = itemList[itemIndex].total_level / procedureList[procedureIndex].products[0].quantity;
-                double quantity_level_O = itemList[itemIndex+1].total_level / procedureList[procedureIndex].products[1].quantity;
-                double quantity_level;
-                if(quantity_level_H > quantity_level_O) quantity_level = quantity_level_H;
-                else quantity_level = quantity_level_O;
+                double quantity_diff_H = itemList[itemIndex].total - itemList[itemIndex].currentQuantity;
+                double quantity_diff_O = itemList[itemIndex+1].total - itemList[itemIndex+1].currentQuantity;
+                if(quantity_diff_H <= 0 && quantity_diff_O <= 0 ) continue;
                 
-                //for quest
-                double quantity_quest_H = itemList[itemIndex].total_quest / procedureList[procedureIndex].products[0].quantity;
-                double quantity_quest_O = itemList[itemIndex+1].total_quest / procedureList[procedureIndex].products[1].quantity;
-                double quantity_quest;
-                if(quantity_quest_H > quantity_quest_O) quantity_quest = quantity_quest_H;
-                else quantity_quest = quantity_quest_O;
+                quantity_diff_H = quantity_diff_H / procedureList[procedureIndex].products[0].quantity;
+                quantity_diff_O = quantity_diff_O / procedureList[procedureIndex].products[1].quantity;
+                double quantity_diff;
+                if(quantity_diff_H > quantity_diff_O) quantity_diff = quantity_diff_H;
+                else quantity_diff = quantity_diff_O;
                 
                 for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
                 {
                     int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
-                    itemList[ingredientIndex].total_level += procedureList[procedureIndex].ingredients[k].quantity * quantity_level;
-                    itemList[ingredientIndex].total_quest += procedureList[procedureIndex].ingredients[k].quantity * quantity_quest;
+                    itemList[ingredientIndex].total += procedureList[procedureIndex].ingredients[k].quantity * quantity_diff;
                 }
                 
                 //skip for oxygen
