@@ -422,8 +422,8 @@ int main()
     itemList.push_back(itemInfo("titanium",260));
     itemList.push_back(itemInfo("nitrogen",300));
     itemList.push_back(itemInfo("hydrogen",400));
+    itemList.push_back(itemInfo("oxygen",900)); //hydrogen and oxygen need to be continuous, for calculating the number of clean water
     itemList.push_back(itemInfo("glass",450));
-    itemList.push_back(itemInfo("oxygen",900));
     itemList.push_back(itemInfo("clean water",1200));
     itemList.push_back(itemInfo("gunpowder",2500));
     itemList.push_back(itemInfo("sulfuric acid",3500));
@@ -1285,7 +1285,10 @@ int main()
             }
             else
             {
-                //hydrogen or oxygen
+                //hydrogen and oxygen
+                //skip for oxygen
+                j++;
+                
                 cout<<"considering special case: "<<itemList[itemIndex].name<<" "<<itemList[itemIndex+1].name<<endl;
                 
                 double quantity_diff_H = itemList[itemIndex].total - itemList[itemIndex].currentQuantity;
@@ -1303,9 +1306,6 @@ int main()
                     int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
                     itemList[ingredientIndex].total += procedureList[procedureIndex].ingredients[k].quantity * quantity_diff;
                 }
-                
-                //skip for oxygen
-                j++;
             }
         }
         //printHierarchy(hierarchy,itemList,procedureList);
