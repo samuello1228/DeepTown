@@ -1045,39 +1045,50 @@ int main()
 
     
     //set isConsiderIngredientTime to true
-    procedureInfo::setConsiderIngredientTime("iron bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("glass",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("steel bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("silver bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("coal",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gold bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("steel plate",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("titanium bar",itemList,procedureList);
+    //Tier 1
+    procedureInfo::setConsiderIngredientTime("accumulator",itemList,procedureList); //sulfur, sodium
     
-    procedureInfo::setConsiderIngredientTime("graphite",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("circuits",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("lamp",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("lab flask",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("green laser",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("diamond cutter",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("solid propellant",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("accumulator",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("solar panel",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gear",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("bomb",itemList,procedureList);
-    
-    procedureInfo::setConsiderIngredientTime("rubber",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("refined oil",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("plastic plate",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("titanium",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("diethyl ether",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gunpowder",itemList,procedureList);
-    
+    //Tier 2
     procedureInfo::setConsiderIngredientTime("maya calendar",itemList,procedureList);
     procedureInfo::setConsiderIngredientTime("haircomb",itemList,procedureList);
-    //procedureInfo::setConsiderIngredientTime("obsidian knife",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("polished diamond",itemList,procedureList);
-    //procedureInfo::setConsiderIngredientTime("",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("obsidian knife",itemList,procedureList);
+    
+    //Tier 3
+    procedureInfo::setConsiderIngredientTime("solar panel",itemList,procedureList); //silicon
+    
+    //Tier 4
+    
+    //Tier 5
+    procedureInfo::setConsiderIngredientTime("green laser",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("titanium",itemList,procedureList); //titanium ore
+    procedureInfo::setConsiderIngredientTime("diethyl ether",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("toxic bomb",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("hydrochloric acid",itemList,procedureList);
+    
+    //Tier 6
+    procedureInfo::setConsiderIngredientTime("titanium bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("diamond cutter",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("lutetium bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("compressor",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("chipset",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("gunpowder",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("plastic plate",itemList,procedureList); //coal
+    
+    //Tier 7
+    procedureInfo::setConsiderIngredientTime("magnetite bar",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("bomb",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("gear",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("optic fiber",itemList,procedureList); //silicon
+    procedureInfo::setConsiderIngredientTime("dry ice",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("liquid nitrogen",itemList,procedureList);
+    procedureInfo::setConsiderIngredientTime("enhanced helium 3",itemList,procedureList);
+    
+    //Tier 8
+    procedureInfo::setConsiderIngredientTime("magnet",itemList,procedureList);
+
+    //Tier 9
+    procedureInfo::setConsiderIngredientTime("electrical engine",itemList,procedureList);
+    
     
     //Raw
     itemInfo::set_currentQuantity("coal",240000,itemList);
