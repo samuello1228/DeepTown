@@ -442,7 +442,7 @@ int main()
     itemList.push_back(itemInfo("lutetium",13500));
     
     //jewel
-    int tradingLevel = 50;
+    int tradingLevel = 100;
     double SF = (1 + 0.02 * (tradingLevel-1)) * 1.35;
     itemList.push_back(itemInfo("polished amber",70));
     itemList.push_back(itemInfo("polished emerald",160));
@@ -574,7 +574,7 @@ int main()
     procedureList.push_back(procedureInfo("crafting","amber",1,5,"amber charger",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","aluminium bar",1,30,"aluminium bottle",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","amber",10,"aluminium bottle",1,20,"amber insulation",1,buildingList,itemList));
-    procedureList.push_back(procedureInfo("crafting","wire",1,"amber insulation",1,3*60,"insulated wire",1,buildingList,itemList));
+    procedureList.push_back(procedureInfo("crafting","wire",1,"amber insulation",1,3*60+20,"insulated wire",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","polished emerald",1,"insulated wire",1,"lamp",1,20,"green laser",5,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","steel plate",1,"polished diamond",5,30,"diamond cutter",1,buildingList,itemList));
     procedureList.push_back(procedureInfo("crafting","gold bar",1,"circuits",3,"silicon",3,30*60,"motherboard",1,buildingList,itemList));
