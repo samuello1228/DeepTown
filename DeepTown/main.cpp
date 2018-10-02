@@ -17,6 +17,7 @@ class itemInfo
     {
         name = newName;
         price = newPrice;
+        isRaw = false;
         ToMake.clear();
         reservation_level = 0;
         reservation_quest = 0;
@@ -49,6 +50,7 @@ class itemInfo
     
     string name;
     double price;
+    bool isRaw;
     double timePerPiece;
     double pricePerTime;
     int procedureIndex;
@@ -252,12 +254,13 @@ double procedureInfo::setTimePerProcedure(vector<itemInfo>& itemList, vector<pro
     else
     {
         double max = time / buildingList[buildingIndex].slot;
-        if(isConsiderIngredientTime)
+        for(unsigned int j = 0; j<ingredients.size(); j++)
         {
-            for(unsigned int j = 0; j<ingredients.size(); j++)
+            int ingredientIndex = ingredients[j].itemIndex;
+            if(isConsiderIngredientTime || !itemList[ingredientIndex].isRaw)
             {
-                int ingredientIndex = ingredients[j].itemIndex;
-                double TimePerPiece = itemList[ingredientIndex].setTimePerPiece(itemList,procedureList,buildingList);
+                //double TimePerPiece = itemList[ingredientIndex].setTimePerPiece(itemList,procedureList,buildingList);
+                double TimePerPiece = itemList[ingredientIndex].timePerPiece;
                 double time = TimePerPiece * ingredients[j].quantity;
                 if(time > max) max = time;
             }
@@ -759,14 +762,16 @@ int main()
     level.push_back(ingredientInfo("electrical engine",1,itemList));
     
     //set procedureIndex and ToMake
+    //set isRaw
     for(unsigned int i = 0; i<itemList.size(); i++)
     {
+        if(itemList[i].name == "coal") itemList[i].isRaw = true;
+        
         int procedureIndex = 0;
         for(unsigned int j = 0; j<procedureList.size(); j++)
         {
             //ignore coal in mining station
-            if(buildingList[ procedureList[j].buildingIndex ].name == "mining station" &&
-               itemList[ procedureList[j].products[0].itemIndex ].name == "coal") continue;
+            if(itemList[i].name == "coal" && buildingList[ procedureList[j].buildingIndex ].name == "mining station") continue;
             
             //set procedureIndex
             for(unsigned int k = 0; k<procedureList[j].products.size(); k++)
@@ -776,6 +781,16 @@ int main()
                 {
                     procedureIndex = j;
                     itemList[i].procedureIndex = j;
+                    
+                    //set isRaw
+                    if(buildingList[ procedureList[j].buildingIndex ].name == "mining station" ||
+                       buildingList[ procedureList[j].buildingIndex ].name == "chemical mining" ||
+                       buildingList[ procedureList[j].buildingIndex ].name == "oil mining" ||
+                       buildingList[ procedureList[j].buildingIndex ].name == "water collector" ||
+                       buildingList[ procedureList[j].buildingIndex ].name == "seed store" )
+                    {
+                        itemList[i].isRaw = true;
+                    }
                 }
             }
         }
@@ -1259,9 +1274,13 @@ int main()
     }
     
     //calculate limiting time per piece
-    for(unsigned int i = 0; i<itemList.size(); i++)
+    for(unsigned int i = 0; i<hierarchy.size(); i++)
     {
-        itemList[i].setTimePerPiece(itemList,procedureList,buildingList);
+        for(unsigned int j = 0; j<hierarchy[i].size(); j++)
+        {
+            int itemIndex = hierarchy[i][j];
+            itemList[itemIndex].setTimePerPiece(itemList,procedureList,buildingList);
+        }
     }
 
     itemInfo::set_reservation_level(itemList,level);
@@ -1327,9 +1346,16 @@ int main()
     printHierarchy(hierarchy,itemList,procedureList);
     
     //print
-    for(unsigned int i = 0; i<itemList.size(); i++)
+    for(unsigned int i = 0; i<hierarchy.size(); i++)
     {
-        //cout<<std::setw(20)<<itemList[i].name<<": "<<std::setw(8)<<itemList[i].timePerPiece<<" "<<std::setw(9)<<itemList[i].pricePerTime<<endl;
+        //cout<<"Tier "<<i<<":"<<endl;
+        for(unsigned int j = 0; j<hierarchy[i].size(); j++)
+        {
+            int itemIndex = hierarchy[i][j];
+            if(itemList[itemIndex].pricePerTime < 268) continue;
+            cout<<std::setw(20)<<itemList[itemIndex].name<<": "<<std::setw(8)<<itemList[itemIndex].timePerPiece<<" "<<std::setw(9)<<itemList[itemIndex].pricePerTime<<endl;
+        }
+        //cout<<endl;
     }
     
     return 0;
