@@ -19,6 +19,8 @@ class itemInfo
         price = newPrice;
         isRaw = false;
         ToMake.clear();
+        isConsiderIngredientTime = false;
+        
         reservation_level = 0;
         reservation_quest = 0;
         isAvailable = true;
@@ -34,6 +36,12 @@ class itemInfo
         
         cout<<"Error: cannot find item: "<<itemName<<endl;
         return -1;
+    }
+    
+    static void setConsiderIngredientTime(string ProductName, vector<itemInfo>& itemList)
+    {
+        int itemIndex = itemInfo::findItem(ProductName,itemList);
+        itemList[itemIndex].isConsiderIngredientTime = true;
     }
     
     double setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList);
@@ -55,6 +63,7 @@ class itemInfo
     double pricePerTime;
     int procedureIndex;
     vector<int> ToMake;
+    bool isConsiderIngredientTime;
     
     double reservation_level;
     double reservation_quest;
@@ -128,7 +137,6 @@ class procedureInfo
         ingredients.clear();
         products.clear();
         products.push_back(productInfo(product1,pQuantity1,itemList));
-        isConsiderIngredientTime = false;
     }
     
     //1->1
@@ -144,7 +152,6 @@ class procedureInfo
         products.clear();
         ingredients.push_back(ingredientInfo(ingredient1,iQuantity1,itemList));
         products.push_back(productInfo(product1,pQuantity1,itemList));
-        isConsiderIngredientTime = false;
     }
     
     //2->1
@@ -162,7 +169,6 @@ class procedureInfo
         ingredients.push_back(ingredientInfo(ingredient1,iQuantity1,itemList));
         ingredients.push_back(ingredientInfo(ingredient2,iQuantity2,itemList));
         products.push_back(productInfo(product1,pQuantity1,itemList));
-        isConsiderIngredientTime = false;
     }
     
     //3->1
@@ -182,7 +188,6 @@ class procedureInfo
         ingredients.push_back(ingredientInfo(ingredient2,iQuantity2,itemList));
         ingredients.push_back(ingredientInfo(ingredient3,iQuantity3,itemList));
         products.push_back(productInfo(product1,pQuantity1,itemList));
-        isConsiderIngredientTime = false;
     }
     
     //1->2
@@ -200,19 +205,9 @@ class procedureInfo
         ingredients.push_back(ingredientInfo(ingredient1,iQuantity1,itemList));
         products.push_back(productInfo(product1,pQuantity1,itemList));
         products.push_back(productInfo(product2,pQuantity2,itemList));
-        isConsiderIngredientTime = false;
     }
     
-    static void setConsiderIngredientTime(string ProductName, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
-    {
-        int itemIndex1 = itemInfo::findItem(ProductName,itemList);
-        int procedureIndex = itemList[itemIndex1].procedureIndex;
-        
-        if(procedureList[procedureIndex].ingredients.size() == 0) return;
-        procedureList[procedureIndex].isConsiderIngredientTime = true;
-    }
-    
-    double setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList);
+    double setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList, bool isConsiderIngredientTime);
     
     double time; //in seconds
     int buildingIndex;
@@ -220,7 +215,6 @@ class procedureInfo
     vector<productInfo> products;
     
     double timePerProcedure;
-    bool isConsiderIngredientTime;
 };
 
 double itemInfo::setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList)
@@ -233,7 +227,7 @@ double itemInfo::setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInf
             int productIndex = procedureList[j].products[k].itemIndex;
             if(itemList[productIndex].name == name)
             {
-                double timePerProcedure = procedureList[j].setTimePerProcedure(itemList,procedureList,buildingList);
+                double timePerProcedure = procedureList[j].setTimePerProcedure(itemList,procedureList,buildingList,isConsiderIngredientTime);
                 PiecePerTime += procedureList[j].products[k].quantity / timePerProcedure;
             }
         }
@@ -245,7 +239,7 @@ double itemInfo::setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInf
     return timePerPiece;
 }
 
-double procedureInfo::setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList)
+double procedureInfo::setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList, bool isConsiderIngredientTime)
 {
     if(buildingList[buildingIndex].name == "mining station")
     {
@@ -1061,49 +1055,30 @@ int main()
     
     //set isConsiderIngredientTime to true
     //Tier 1
-    procedureInfo::setConsiderIngredientTime("accumulator",itemList,procedureList); //sulfur, sodium
+    //itemInfo::setConsiderIngredientTime("copper bar",itemList); //copper
+    //itemInfo::setConsiderIngredientTime("iron bar",itemList); //iron
+    //itemInfo::setConsiderIngredientTime("silver bar",itemList); //silver
+    //itemInfo::setConsiderIngredientTime("gold bar",itemList); //gold
+    itemInfo::setConsiderIngredientTime("accumulator",itemList); //sulfur, sodium
+    //itemInfo::setConsiderIngredientTime("glass",itemList); //silicon
     
     //Tier 2
-    procedureInfo::setConsiderIngredientTime("maya calendar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("haircomb",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("obsidian knife",itemList,procedureList);
+    //itemInfo::setConsiderIngredientTime("lab flask",itemList);
+    //itemInfo::setConsiderIngredientTime("maya calendar",itemList);
     
     //Tier 3
-    procedureInfo::setConsiderIngredientTime("solar panel",itemList,procedureList); //silicon
+    itemInfo::setConsiderIngredientTime("graphite",itemList); //coal
+    //itemInfo::setConsiderIngredientTime("clean water",itemList); //water
     
     //Tier 4
+    //itemInfo::setConsiderIngredientTime("circuits",itemList);
+    //itemInfo::setConsiderIngredientTime("sulfuric acid",itemList); //sulfur
     
     //Tier 5
-    procedureInfo::setConsiderIngredientTime("green laser",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("titanium",itemList,procedureList); //titanium ore
-    procedureInfo::setConsiderIngredientTime("diethyl ether",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("toxic bomb",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("hydrochloric acid",itemList,procedureList);
+    //itemInfo::setConsiderIngredientTime("hydrochloric acid",itemList); //sodium chloride
     
     //Tier 6
-    procedureInfo::setConsiderIngredientTime("titanium bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("diamond cutter",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("lutetium bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("compressor",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("chipset",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gunpowder",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("plastic plate",itemList,procedureList); //coal
-    
-    //Tier 7
-    procedureInfo::setConsiderIngredientTime("magnetite bar",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("bomb",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("gear",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("optic fiber",itemList,procedureList); //silicon
-    procedureInfo::setConsiderIngredientTime("dry ice",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("liquid nitrogen",itemList,procedureList);
-    procedureInfo::setConsiderIngredientTime("enhanced helium 3",itemList,procedureList);
-    
-    //Tier 8
-    procedureInfo::setConsiderIngredientTime("magnet",itemList,procedureList);
-
-    //Tier 9
-    procedureInfo::setConsiderIngredientTime("electrical engine",itemList,procedureList);
-    
+    //itemInfo::setConsiderIngredientTime("chipset",itemList);
     
     //Raw
     itemInfo::set_currentQuantity("coal",240000,itemList);
