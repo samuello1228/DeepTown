@@ -61,7 +61,7 @@ class itemInfo
     bool isRaw;
     double timePerPiece;
     double pricePerTime;
-    int procedureIndex;
+    vector<int> procedureIndex;
     vector<int> ToMake;
     bool isConsiderIngredientTime;
     
@@ -285,7 +285,7 @@ void itemInfo::set_reservation_quest(vector<itemInfo>& itemList, vector<ingredie
 void GainResources(string itemName, double quantity, vector<ingredientInfo>& quest, vector<itemInfo>& itemList, vector<procedureInfo>& procedureList)
 {
     int itemIndex = itemInfo::findItem(itemName,itemList);
-    int procedureIndex = itemList[itemIndex].procedureIndex;
+    int procedureIndex = itemList[itemIndex].procedureIndex[0];
     for(unsigned int i = 0; i<procedureList[procedureIndex].ingredients.size(); i++)
     {
         int ingredientIndex = procedureList[procedureIndex].ingredients[i].itemIndex;
@@ -328,7 +328,7 @@ void printHierarchy(vector< vector<int> >& hierarchy, vector<itemInfo>& itemList
             else cout<<std::setw(8)<<int(ceil(quantity_diff));
             cout<<":";
             
-            int procedureIndex = itemList[itemIndex].procedureIndex;
+            int procedureIndex = itemList[itemIndex].procedureIndex[0];
             for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
             {
                 int ingredientIndex = procedureList[procedureIndex].ingredients[k].itemIndex;
@@ -764,9 +764,6 @@ int main()
         int procedureIndex = 0;
         for(unsigned int j = 0; j<procedureList.size(); j++)
         {
-            //ignore coal in mining station
-            if(itemList[i].name == "coal" && buildingList[ procedureList[j].buildingIndex ].name == "mining station") continue;
-            
             //set procedureIndex
             for(unsigned int k = 0; k<procedureList[j].products.size(); k++)
             {
@@ -774,7 +771,7 @@ int main()
                 if(i == productIndex)
                 {
                     procedureIndex = j;
-                    itemList[i].procedureIndex = j;
+                    itemList[i].procedureIndex.push_back(j);
                     
                     //set isRaw
                     if(buildingList[ procedureList[j].buildingIndex ].name == "mining station" ||
@@ -1221,17 +1218,21 @@ int main()
             
             //decide whether all ingredients are inside the hierarchy
             bool isFoundAllIngredients = true;
-            for(unsigned int j = 0; j<procedureList[ itemList[i].procedureIndex ].ingredients.size(); j++)
+            for(unsigned int j = 0; j<itemList[i].procedureIndex.size(); j++)
             {
-                bool isFoundIngredient = false;
-                for(unsigned int k = 0; k<hierarchy.size(); k++)
+                int procedureIndex = itemList[i].procedureIndex[j];
+                for(unsigned int k = 0; k<procedureList[procedureIndex].ingredients.size(); k++)
                 {
-                    for(unsigned int m = 0; m<hierarchy[k].size(); m++)
+                    bool isFoundIngredient = false;
+                    for(unsigned int m = 0; m<hierarchy.size(); m++)
                     {
-                        if(procedureList[ itemList[i].procedureIndex ].ingredients[j].itemIndex == hierarchy[k][m]) isFoundIngredient = true;
+                        for(unsigned int n = 0; n<hierarchy[m].size(); n++)
+                        {
+                            if(procedureList[procedureIndex].ingredients[k].itemIndex == hierarchy[m][n]) isFoundIngredient = true;
+                        }
                     }
+                    if(!isFoundIngredient) isFoundAllIngredients = false;
                 }
-                if(!isFoundIngredient) isFoundAllIngredients = false;
             }
             
             if(!isFoundAllIngredients)
@@ -1273,7 +1274,7 @@ int main()
         for(unsigned int j = 0; j<hierarchy[i].size(); j++)
         {
             int itemIndex = hierarchy[i][j];
-            int procedureIndex = itemList[itemIndex].procedureIndex;
+            int procedureIndex = itemList[itemIndex].procedureIndex[0];
             
             if(procedureList[procedureIndex].products.size() == 1)
             {
