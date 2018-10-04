@@ -8,6 +8,7 @@ class itemInfo;
 class buildingInfo;
 class ingredientInfo;
 class productInfo;
+class TimeProfileInfo;
 class procedureInfo;
 
 class itemInfo
@@ -44,7 +45,8 @@ class itemInfo
         itemList[itemIndex].isConsiderIngredientTime = true;
     }
     
-    double setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList);
+    void setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList);
+    
     static void set_reservation_level(vector<itemInfo>& itemList, vector<ingredientInfo>& level);
     static void set_reservation_quest(vector<itemInfo>& itemList, vector<ingredientInfo>& quest);
     
@@ -64,6 +66,8 @@ class itemInfo
     vector<int> procedureIndex;
     vector<int> ToMake;
     bool isConsiderIngredientTime;
+    vector<double> remainingIngredients;
+    vector<double>  timeProfile;
     
     double reservation_level;
     double reservation_quest;
@@ -207,7 +211,7 @@ class procedureInfo
         products.push_back(productInfo(product2,pQuantity2,itemList));
     }
     
-    double setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList, bool isConsiderIngredientTime);
+    void setTimePerProcedure(vector<buildingInfo>& buildingList);
     
     double time; //in seconds
     int buildingIndex;
@@ -217,29 +221,120 @@ class procedureInfo
     double timePerProcedure;
 };
 
-double itemInfo::setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList)
+void itemInfo::setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList)
 {
-    double PiecePerTime = 0;
-    for(unsigned int j = 0; j<procedureList.size(); j++)
+    //initialize timeProfile
+    vector<double> timeProfile2;
+    for(unsigned int i = 0; i<buildingList.size(); i++)
     {
-        for(unsigned int k = 0; k<procedureList[j].products.size(); k++)
+        timeProfile.push_back(0);
+        timeProfile2.push_back(0);
+    }
+    
+    //remainingIngredients
+    for(unsigned int i = 0; i<itemList.size(); i++)
+    {
+        remainingIngredients.push_back(0);
+    }
+    
+    //Fill timeProfile and remainingIngredients
+    if(procedureIndex.size() == 1 && !isRaw)
+    {
+        int ProcedureIndex = procedureIndex[0];
+        
+        //Get productQuantity
+        double productQuantity = 0;
+        for(unsigned int i = 0; i<procedureList[ProcedureIndex].products.size(); i++)
         {
-            int productIndex = procedureList[j].products[k].itemIndex;
+            int productIndex = procedureList[ProcedureIndex].products[i].itemIndex;
             if(itemList[productIndex].name == name)
             {
-                double timePerProcedure = procedureList[j].setTimePerProcedure(itemList,procedureList,buildingList,isConsiderIngredientTime);
-                PiecePerTime += procedureList[j].products[k].quantity / timePerProcedure;
+                productQuantity = procedureList[ProcedureIndex].products[i].quantity;
+            }
+        }
+        
+        //Fill the time per piece for the procedure
+        timeProfile[procedureList[ProcedureIndex].buildingIndex] += procedureList[ProcedureIndex].timePerProcedure / productQuantity;
+        
+        //Fill the time needed for all ingredients
+        for(unsigned int i = 0; i<procedureList[ProcedureIndex].ingredients.size(); i++)
+        {
+            int ingredientIndex = procedureList[ProcedureIndex].ingredients[i].itemIndex;
+            for(unsigned int j = 0; j<buildingList.size(); j++)
+            {
+                timeProfile[j] += itemList[ingredientIndex].timeProfile[j] * procedureList[ProcedureIndex].ingredients[i].quantity / productQuantity;
+            }
+            
+            for(unsigned int j = 0; j<itemList.size(); j++)
+            {
+                remainingIngredients[j] += itemList[ingredientIndex].remainingIngredients[j] * procedureList[ProcedureIndex].ingredients[i].quantity / productQuantity;
             }
         }
     }
+    else
+    {
+        int itemIndex = itemInfo::findItem(name,itemList);
+        remainingIngredients[itemIndex] += 1;
+    }
     
-    timePerPiece = 1/PiecePerTime;
+    //copy timeProfile to timeProfile2
+    for(unsigned int i = 0; i<buildingList.size(); i++)
+    {
+        timeProfile2[i] = timeProfile[i];
+    }
+    
+    for(unsigned int i = 0; i<itemList.size(); i++)
+    {
+        if(remainingIngredients[i] == 0) continue;
+        if(itemList[i].procedureIndex.size() >= 2) continue;
+        if(isConsiderIngredientTime || isRaw)
+        {
+            //Fill timeProfile
+            int ProcedureIndex = itemList[i].procedureIndex[0];
+            
+            //Get productQuantity
+            double productQuantity = 0;
+            for(unsigned int j = 0; j<procedureList[ProcedureIndex].products.size(); j++)
+            {
+                int productIndex = procedureList[ProcedureIndex].products[j].itemIndex;
+                if(i == productIndex)
+                {
+                    productQuantity = procedureList[ProcedureIndex].products[j].quantity;
+                }
+            }
+            
+            timeProfile2[procedureList[ProcedureIndex].buildingIndex] += procedureList[ProcedureIndex].timePerProcedure *remainingIngredients[i] / productQuantity;
+        }
+    }
+    
+    for(unsigned int i = 0; i<itemList.size(); i++)
+    {
+        if(remainingIngredients[i] == 0) continue;
+        if(itemList[i].procedureIndex.size() <= 1) continue;
+        if(isConsiderIngredientTime || isRaw)
+        {
+            //coal
+            double PiecePerTime = 0;
+            PiecePerTime += (1.0 + 0.7 + 0.59 + 0.54 + 0.48 + 0.43 + 0.38 + 0.33 + 0.27 + 0.22)*15 /60;
+            PiecePerTime += 50.0/90;
+            
+            timePerPiece = 1/PiecePerTime;
+            pricePerTime = price / timePerPiece;
+            return;
+        }
+    }
+    
+    double max = 0;
+    for(unsigned int i = 0; i<buildingList.size(); i++)
+    {
+        if(timeProfile2[i] > max) max = timeProfile2[i];
+    }
+    
+    timePerPiece = max;
     pricePerTime = price / timePerPiece;
-    
-    return timePerPiece;
 }
 
-double procedureInfo::setTimePerProcedure(vector<itemInfo>& itemList, vector<procedureInfo>& procedureList, vector<buildingInfo>& buildingList, bool isConsiderIngredientTime)
+void procedureInfo::setTimePerProcedure(vector<buildingInfo>& buildingList)
 {
     if(buildingList[buildingIndex].name == "mining station")
     {
@@ -247,23 +342,8 @@ double procedureInfo::setTimePerProcedure(vector<itemInfo>& itemList, vector<pro
     }
     else
     {
-        double max = time / buildingList[buildingIndex].slot;
-        for(unsigned int j = 0; j<ingredients.size(); j++)
-        {
-            int ingredientIndex = ingredients[j].itemIndex;
-            if(isConsiderIngredientTime || !itemList[ingredientIndex].isRaw)
-            {
-                //double TimePerPiece = itemList[ingredientIndex].setTimePerPiece(itemList,procedureList,buildingList);
-                double TimePerPiece = itemList[ingredientIndex].timePerPiece;
-                double time = TimePerPiece * ingredients[j].quantity;
-                if(time > max) max = time;
-            }
-        }
-        
-        timePerProcedure = max;
+        timePerProcedure = time / buildingList[buildingIndex].slot;
     }
-
-    return timePerProcedure;
 }
 
 void itemInfo::set_reservation_level(vector<itemInfo>& itemList, vector<ingredientInfo>& level)
@@ -755,6 +835,12 @@ int main()
     level.push_back(ingredientInfo("steel plate",150,itemList));
     level.push_back(ingredientInfo("electrical engine",1,itemList));
     
+    //setTimePerProcedure
+    for(unsigned int i = 0; i<procedureList.size(); i++)
+    {
+        procedureList[i].setTimePerProcedure(buildingList);
+    }
+    
     //set procedureIndex and ToMake
     //set isRaw
     for(unsigned int i = 0; i<itemList.size(); i++)
@@ -1048,34 +1134,8 @@ int main()
     GainResources("lutetium bar",1,quest,itemList,procedureList);
 
     /////////
-
-    
     //set isConsiderIngredientTime to true
-    //Tier 1
-    //itemInfo::setConsiderIngredientTime("copper bar",itemList); //copper
-    //itemInfo::setConsiderIngredientTime("iron bar",itemList); //iron
-    //itemInfo::setConsiderIngredientTime("silver bar",itemList); //silver
-    //itemInfo::setConsiderIngredientTime("gold bar",itemList); //gold
     itemInfo::setConsiderIngredientTime("accumulator",itemList); //sulfur, sodium
-    //itemInfo::setConsiderIngredientTime("glass",itemList); //silicon
-    
-    //Tier 2
-    //itemInfo::setConsiderIngredientTime("lab flask",itemList);
-    //itemInfo::setConsiderIngredientTime("maya calendar",itemList);
-    
-    //Tier 3
-    itemInfo::setConsiderIngredientTime("graphite",itemList); //coal
-    //itemInfo::setConsiderIngredientTime("clean water",itemList); //water
-    
-    //Tier 4
-    //itemInfo::setConsiderIngredientTime("circuits",itemList);
-    //itemInfo::setConsiderIngredientTime("sulfuric acid",itemList); //sulfur
-    
-    //Tier 5
-    //itemInfo::setConsiderIngredientTime("hydrochloric acid",itemList); //sodium chloride
-    
-    //Tier 6
-    //itemInfo::setConsiderIngredientTime("chipset",itemList);
     
     //Raw
     itemInfo::set_currentQuantity("coal",240000,itemList);
