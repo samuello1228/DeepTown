@@ -8,7 +8,6 @@ class itemInfo;
 class buildingInfo;
 class ingredientInfo;
 class productInfo;
-class TimeProfileInfo;
 class procedureInfo;
 
 class itemInfo
@@ -307,20 +306,66 @@ void itemInfo::setTimePerPiece(vector<itemInfo>& itemList, vector<procedureInfo>
         }
     }
     
-    for(unsigned int i = 0; i<itemList.size(); i++)
+    if(isConsiderIngredientTime || name == "coal")
     {
-        if(remainingIngredients[i] == 0) continue;
-        if(itemList[i].procedureIndex.size() <= 1) continue;
-        if(isConsiderIngredientTime || isRaw)
+        for(unsigned int i = 0; i<itemList.size(); i++)
         {
-            //coal
-            double PiecePerTime = 0;
-            PiecePerTime += (1.0 + 0.7 + 0.59 + 0.54 + 0.48 + 0.43 + 0.38 + 0.33 + 0.27 + 0.22)*15 /60;
-            PiecePerTime += 50.0/90;
-            
-            timePerPiece = 1/PiecePerTime;
-            pricePerTime = price / timePerPiece;
-            return;
+            if(remainingIngredients[i] == 0) continue;
+            if(itemList[i].name == "coal")
+            {
+                //coal
+                vector<double> PiecePerTime;
+                double TotalHypotheticalQantity = remainingIngredients[i];
+                for(unsigned int j = 0; j<itemList[i].procedureIndex.size(); j++)
+                {
+                    int ProcedureIndex = itemList[i].procedureIndex[j];
+                    
+                    //Get productQuantity
+                    double productQuantity = 0;
+                    for(unsigned int k = 0; k<procedureList[ProcedureIndex].products.size(); k++)
+                    {
+                        int productIndex = procedureList[ProcedureIndex].products[k].itemIndex;
+                        if(i == productIndex)
+                        {
+                            productQuantity = procedureList[ProcedureIndex].products[k].quantity;
+                        }
+                    }
+                    
+                    //Maximun time per procedure
+                    double max = procedureList[ProcedureIndex].timePerProcedure;
+                    for(unsigned int k = 0; k<procedureList[ProcedureIndex].ingredients.size(); k++)
+                    {
+                        int ingredientIndex = procedureList[ProcedureIndex].ingredients[k].itemIndex;
+                        if(itemList[ingredientIndex].procedureIndex.size() >= 2 || itemList[ingredientIndex].isRaw) continue;
+                        
+                        double TimePerProcedure = itemList[ingredientIndex].timePerPiece * procedureList[ProcedureIndex].ingredients[k].quantity;
+                        if(TimePerProcedure > max) max = TimePerProcedure;
+                    }
+                    PiecePerTime.push_back(productQuantity/max);
+                    
+                    TotalHypotheticalQantity += timeProfile2[procedureList[ProcedureIndex].buildingIndex] * PiecePerTime[j];
+                }
+                
+                //Calculate HypotheticalTotalTime
+                double PiecePerTime_AllChannel = 0;
+                for(unsigned int j = 0; j<PiecePerTime.size(); j++)
+                {
+                    PiecePerTime_AllChannel += PiecePerTime[j];
+                }
+                double HypotheticalTotalTime = TotalHypotheticalQantity / PiecePerTime_AllChannel;
+                
+                //replace timeProfile2 by HypotheticalTotalTime
+                for(unsigned int j = 0; j<itemList[i].procedureIndex.size(); j++)
+                {
+                    int ProcedureIndex = itemList[i].procedureIndex[j];
+                    if(timeProfile2[procedureList[ProcedureIndex].buildingIndex] > HypotheticalTotalTime)
+                    {
+                        cout<<"Error: "<<name<<endl;
+                        return;
+                    }
+                    timeProfile2[procedureList[ProcedureIndex].buildingIndex] = HypotheticalTotalTime;
+                }
+            }
         }
     }
     
